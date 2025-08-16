@@ -4,6 +4,7 @@ import { TextBar } from '../components/TextBar';
 import logo from '../assets/white-logo.svg';
 import moldure from '../assets/squares-moldure.svg';
 import { Link, useNavigate } from 'react-router-dom';
+import { Icon } from '../components/Icon';
 import './SignUp.css';
 
 const SignUp: React.FC = () => {
@@ -80,69 +81,72 @@ const SignUp: React.FC = () => {
             </div>
 
             {/** Form **/}
-            <div className='middle-container flex flex-col items-center justify-center my-2 2xl:w-auto w-full px-8'>
-                <h1 className="page-title text-[#006ACB] text-3xl">Cadastro</h1>
+            <div className='middle-container flex flex-col items-start'>
+                <Link className='goback-link 2xl:hidden' to='/'><Icon className="back-icon bg-none my-2" iconCenter='arrowLeft'></Icon></Link>
+                <div className='form-container flex flex-col items-center justify-center my-2 2xl:w-auto w-full px-8'>
+                    <h1 className="page-title text-[#006ACB] text-3xl">Cadastro</h1>
 
-                <form onSubmit={handleSubmit} className="flex flex-col items-start justify-start w-full 2xl:max-w-xl 2xl:p-2 relative z-10 gap-4">
-                    <TextBar 
-                        label="Nome" 
-                        name="name" 
-                        placeholder="Insira seu nome completo" 
-                        onChange={handleChange} 
-                        value={formData.name}
-                    />
-                    <TextBar 
-                        label="Telefone" 
-                        name="phone" 
-                        type="phone" 
-                        placeholder="Insira seu número com DDD" 
-                        onChange={handleChange} 
-                        value={formData.phone}
-                    />
-                    <TextBar 
-                        label="E-mail institucional" 
-                        name="email" 
-                        type="email" 
-                        placeholder="Insira seu e-mail institucional" 
-                        onChange={handleChange} 
-                        value={formData.email}
-                    />
-                    <TextBar 
-                        label="Confirme seu e-mail" 
-                        name="confirmEmail" 
-                        type="email" 
-                        placeholder="Confirme seu e-mail institucional" 
-                        onChange={handleChange} 
-                        value={formData.confirmEmail}
-                    />
-                    
-                    {/** Password Area **/}
-                    <div className="password-container w-auto flex flex-col md:flex-row items-start 2xl:gap-8 gap-4">
+                    <form onSubmit={handleSubmit} className="flex flex-col items-start justify-start w-full 2xl:max-w-xl 2xl:p-2 relative z-10 gap-4">
                         <TextBar 
-                            label="Senha" 
-                            name="password" 
-                            type="password" 
-                            placeholder="Crie uma senha forte" 
+                            label="Nome" 
+                            name="name" 
+                            placeholder="Insira seu nome completo" 
                             onChange={handleChange} 
+                            value={formData.name}
                         />
                         <TextBar 
-                            label="Confirme a senha" 
-                            name="confirmPassword" 
-                            type="password" 
-                            placeholder="Confirme sua senha" 
+                            label="Telefone" 
+                            name="phone" 
+                            type="phone" 
+                            placeholder="Insira seu número com DDD" 
                             onChange={handleChange} 
-                            value={formData.confirmPassword}
+                            value={formData.phone}
                         />
-                    </div>
-                    <div className="password-requirements text-start text-[#94A2B7] text-sm mb-4">
-                                <ul>Mínimo 8 dígitos</ul>
-                                <ul>Mínimo 1 número</ul>
-                                <ul>Mínimo 1 letra maiúscula</ul>
-                                <ul>Mínimo 1 letra minúscula</ul>
-                                <ul>Mínimo 1 caractere especial</ul>
-                    </div>
-                </form>
-                <Button type="submit" ref={ref} className="p-4"> Prosseguir </Button>
+                        <TextBar 
+                            label="E-mail institucional" 
+                            name="email" 
+                            type="email" 
+                            placeholder="Insira seu e-mail institucional" 
+                            onChange={handleChange} 
+                            value={formData.email}
+                        />
+                        <TextBar 
+                            label="Confirme seu e-mail" 
+                            name="confirmEmail" 
+                            type="email" 
+                            placeholder="Confirme seu e-mail institucional" 
+                            onChange={handleChange} 
+                            value={formData.confirmEmail}
+                        />
+                        
+                        {/** Password Area **/}
+                        <div className="password-container w-auto flex flex-col md:flex-row items-start 2xl:gap-8 gap-4">
+                            <TextBar 
+                                label="Senha" 
+                                name="password" 
+                                type="password" 
+                                placeholder="Crie uma senha forte" 
+                                onChange={handleChange} 
+                            />
+                            <TextBar 
+                                label="Confirme a senha" 
+                                name="confirmPassword" 
+                                type="password" 
+                                placeholder="Confirme sua senha" 
+                                onChange={handleChange} 
+                                value={formData.confirmPassword}
+                            />
+                        </div>
+                        <div className="password-requirements text-start text-[#94A2B7] text-sm mb-4">
+                                    <ul>Mínimo 8 dígitos</ul>
+                                    <ul>Mínimo 1 número</ul>
+                                    <ul>Mínimo 1 letra maiúscula</ul>
+                                    <ul>Mínimo 1 letra minúscula</ul>
+                                    <ul>Mínimo 1 caractere especial</ul>
+                        </div>
+                    </form>
+                    <Button type="submit" ref={ref} className="p-4"> Prosseguir </Button>
+                </div>
             </div>
             {/** Right Moldure **/}
             <img 
