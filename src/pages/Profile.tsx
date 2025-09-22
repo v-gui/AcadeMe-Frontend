@@ -10,8 +10,6 @@ import logoVambora from '../assets/logoVamboraFatec.svg';
 import logoRedeNeural from '../assets/logoRedeneural.svg';
 import { TextBar } from '../components/TextBar';
 
-" Teste de commit "
-
 const Profile: React.FC = () => {
     const ref = useRef<HTMLButtonElement | null>(null);
     const navigate = useNavigate();
