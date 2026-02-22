@@ -36,12 +36,43 @@ const Profile: React.FC = () => {
         const parsedUser = JSON.parse(savedUser);
         setUser(parsedUser);
 
+        // Busca os projetos reais do aluno
         const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
         fetch(`${apiUrl}/students/${parsedUser._id}/projects`)
             .then(res => res.json())
+                // Ordena por data de criação (mais recente primeiro)
             .then(data => setProjects(data))
             .catch(err => console.error("Erro ao buscar projetos:", err));
     }, [navigate]);
+
+    // --- FUNÇÕES DE PROJETO ---
+
+    const handleDeleteProject = async (projectId: string) => {
+        if (!window.confirm("Tem certeza que deseja excluir este projeto? Esta ação não pode ser desfeita.")) return;
+
+        try {
+            const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+            const response = await fetch(`${apiUrl}/projects/${projectId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                setProjects(projects.filter(p => p._id !== projectId));
+                alert("Projeto removido com sucesso!");
+            } else {
+                alert("Não foi possível excluir o projeto.");
+            }
+        } catch (error) {
+            console.error("Erro ao deletar:", error);
+            alert("Erro de conexão com o servidor.");
+        }
+    };
+
+    const handleEditProject = (projectId: string) => {
+        navigate(`/Upload?edit=${projectId}`);
+    };
+
+    // --- FIM DAS FUNÇÕES DE PROJETO ---
 
     const convertToBase64 = (file: File): Promise<string> => {
         return new Promise((resolve, reject) => {
@@ -69,7 +100,8 @@ const Profile: React.FC = () => {
                     const updatedUser = await response.json();
                     setUser(updatedUser);
                     localStorage.setItem('@AcadeMe:user', JSON.stringify(updatedUser));
-                    alert("Foto de perfil atualizada com sucesso!");
+                    window.dispatchEvent(new Event('storage'));
+                    alert("Foto de perfil atualizada!");
                 }
             } catch (err) {
                 console.error("Erro ao fazer upload da imagem:", err);
@@ -94,7 +126,6 @@ const Profile: React.FC = () => {
                 <div className="profile-sidebar hidden md:flex flex-col bg-gradient-to-b from-[#003465] to-[#006ACB] w-full min-w-80 md:w-[350px] shrink-0">
                     <div className="profile-header p-8">
                         
-                        {/* INPUT MOVIDO PARA DENTRO DA SIDEBAR PARA EVITAR ERRO DE REFERÊNCIA */}
                         <input 
                             type="file" 
                             ref={fileInputRef} 
@@ -103,13 +134,12 @@ const Profile: React.FC = () => {
                             accept="image/*" 
                         />
 
-                        {/* IMAGEM COM Z-INDEX E STOP PROPAGATION */}
                         <img 
                             src={user.profileImage || UserIcon}
                             alt="Foto de perfil" 
                             className="profile-image relative z-50 border-4 rounded-full border-white p-1 w-36 h-36 mt-6 mx-auto object-cover cursor-pointer hover:brightness-110 active:scale-95 transition shadow-lg"
                             onClick={(e) => {
-                                e.stopPropagation(); // Impede que o clique seja bloqueado por elementos pai
+                                e.stopPropagation();
                                 fileInputRef.current?.click();
                             }}
                             title="Clique para alterar sua foto"
@@ -160,11 +190,17 @@ const Profile: React.FC = () => {
                             projects.map((proj) => (
                                 <ProjectCard
                                     key={proj._id}
+                                    id={proj._id}
                                     title={proj.title}
                                     description={proj.description}
                                     tags={proj.tags || ["AcadeMe"]}
                                     date={new Date(proj.createdAt).toLocaleDateString()}
-                                    imageUrl={logoBlockchain}
+                                    
+                                    /* MODIFICAÇÃO AQUI: Usa a imagem salva no banco ou o logo padrão */
+                                    imageUrl={proj.imageUrl || logoBlockchain} 
+                                    
+                                    onDelete={handleDeleteProject}
+                                    onEdit={handleEditProject}
                                 />
                             ))
                         ) : (
