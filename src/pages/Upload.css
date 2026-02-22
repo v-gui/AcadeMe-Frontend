@@ -1,236 +1,174 @@
-.upload-container {
-    font-family: Arial, sans-serif;
+/* Container Principal */
+.upload-page {
+    font-family: 'Inter', sans-serif; /* Uma fonte mais moderna que Arial */
+    background-color: #F0F2F5;
+    min-height: 100vh;
+}
+
+/* --- HEADER DO PROJETO (PARTE AZUL) --- */
+.project-header-edit {
+    background-color: #003465;
+    padding: 60px 40px;
+    color: white;
+    box-shadow: inset 0 -10px 20px rgba(0,0,0,0.1);
+}
+
+/* Input de Título Transparente dentro do Azul */
+.project-header-edit input {
+    background: transparent;
+    border: 2px solid transparent;
+    color: white;
+    font-size: 32px;
+    font-weight: 900;
+    width: 100%;
+    padding: 8px;
+    border-radius: 8px;
+    transition: all 0.3s;
+}
+
+.project-header-edit input:focus {
+    border-color: #2C9AFF;
+    background: rgba(255, 255, 255, 0.05);
+    outline: none;
+}
+
+.project-header-edit textarea {
+    background: transparent;
+    border: none;
+    color: #BDD6ED;
+    font-size: 18px;
+    width: 100%;
+    resize: none;
+    margin-top: 10px;
+    outline: none;
+}
+
+/* --- SEÇÕES DE CONTEÚDO (CARDS BRANCOS) --- */
+.section-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: 1px solid #E5E7EB;
+    overflow: hidden;
+}
+
+.section-header {
+    background-color: #F9FAFB;
+    padding: 16px 24px;
+    border-bottom: 1px solid #E5E7EB;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.section-header h2 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #003465;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* --- GRID DE PÔSTERES --- */
+.posters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+    margin-top: 24px;
+}
+
+.poster-card {
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid #E5E7EB;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.poster-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.poster-image {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #F3F4F6;
+    margin-bottom: 12px;
+}
+
+/* Card de Adicionar Foto (Tracejado) */
+.add-image-card {
+    border: 3px dashed #D1D5DB;
+    background: #F9FAFB;
     display: flex;
     flex-direction: column;
-    background-color: #f5f5f5;
-    min-height: 100vh;
-  }
-  
-  .upload-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: #003465;
-    padding: 10px 20px;
-    color: white;
-  }
-  
-  .header-left {
-    display: flex;
-    align-items: center;
-  }
-  
-  .logo {
-    width: 50px;
-    height: auto;
-    margin-right: 10px;
-  }
-  
-  .search-bar {
-    padding: 5px 10px;
-    border-radius: 5px;
-    border: none;
-    width: 200px;
-  }
-  
-  .header-right .profile-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-  }
-  
-  .upload-main {
-    padding: 20px;
-  }
-  
-  .project-details {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    background-color: #ffffff;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-  
-.project-logo {
-    width: 20%;
-    height: auto;
-}
-
-.project-info {
-    width: 80%;
-}
-  
-.project-info h1 {
-    font-size: 24px;
-    color: #003465;
-}
-
-.project-info p {
-    color: #666;
-    margin: 5px 0;
-}
-  
-  .project-meta {
-    color: #666;
-    margin: 5px 0;
-  }
-  
-  .project-tags {
-    margin: 10px 0;
-  }
-
-  .project-info .project-meta,
-.project-info .project-tags {
-    color: #666;
-    margin: 10px 0;
-}
-
-.project-info .project-meta strong,
-.project-info .project-tags strong {
-    color: #003465;
-}
-  
-  /* Posters Section */
-  .posters-section {
-    margin-top: 20px;
-}
-
-.section-title {
-    font-size: 24px;
-    color: #003465; /* Cor do título */
-    margin-bottom: 10px; /* Espaçamento abaixo do título */
-}
-  
-.posters-grid {
-    display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap; /* Para permitir que os pôsteres se ajustem em diferentes tamanhos de tela */
-}
-  
-.poster-card {
-    width: 30%; /* Ajuste conforme necessário */
-    background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    padding: 10px;
-    text-align: center;
-    margin-bottom: 20px; /* Espaçamento entre os pôsteres */
-    height: 250px; /* Aumente a altura conforme necessário */
-    display: flex; /* Usando flexbox */
-    flex-direction: column; /* Alinhando os itens em coluna */
-    justify-content: center; /* Centralizando verticalmente */
-    align-items: center; /* Centralizando horizontalmente */
-}
-  
-.poster-description {
-    font-size: 14px; /* Tamanho da fonte menor para não distrair */
-    color: #666; /* Cor mais suave */
-    margin-top: 5px; /* Espaçamento acima da descrição */
-}
-  
-  .poster-card:hover {
-    transform: scale(1.05);
-    transition: 0.3s ease-in-out;
-  }
-  
-  .poster-image {
-    max-width: 100%; /* Para garantir que a imagem não exceda o tamanho do card */
-    border-radius: 5px; /* Bordas arredondadas para as imagens */
-    height: 70%; /* Ajuste a altura da imagem para ocupar mais espaço */
-}
-
-  
-.add-image-card {
-    display: flex;
     align-items: center;
     justify-content: center;
-    width: 30%; /* Deve ser o mesmo que os outros pôsteres */
-    height: 250px; /* Aumente a altura para corresponder aos outros pôsteres */
-    background-color: #e0e0e0; /* Cor de fundo para o ícone */
-    border-radius: 8px;
     cursor: pointer;
-    font-size: 48px; /* Tamanho do ícone */
-    color: #666; /* Cor do ícone */
-    transition: background-color 0.3s; /* Transição suave ao passar o mouse */
+    min-height: 230px;
+    color: #9CA3AF;
+    transition: all 0.3s;
 }
 
-  
-.add-icon {
-    font-size: 48px; /* Ajuste o tamanho do ícone conforme necessário */
-    color: #666;
-    line-height: 1; /* Para centralizar verticalmente */
+.add-image-card:hover {
+    border-color: #006ACB;
+    color: #006ACB;
+    background: #EFF6FF;
 }
-  /* Files and References Section */
-  .files-references-section {
+
+/* --- TABELA E LISTA DE ARQUIVOS --- */
+.file-row {
     display: flex;
     justify-content: space-between;
-    background-color: #f5f5f5;
-    padding: 20px;
-    width: 100%;
-}
-  
-  .files-section,
-  .references-section {
-    width: 48%;
-    color: #003465;
-  }
-  
-  .files-table {
-    width: 100%;
-    border-collapse: collapse;
-    border: 1px solid #ccc;
-    padding: 10px;
-}
-  
-.files-table th {
-    background-color: #eee;
-    padding: 10px;
-    font-weight: bold;
+    padding: 12px 24px;
+    border-bottom: 1px solid #F3F4F6;
+    transition: background 0.2s;
 }
 
-  .files-table td {
-    border: 1px solid #ddd;
-    padding: 8px;
-  }
-  
-  .files-table th {
-    background-color: #f4f4f4;
-    text-align: left;
-  }
+.file-row:last-child {
+    border-bottom: none;
+}
 
-  .button-container {
+.file-row:hover {
+    background-color: #F0F7FF;
+}
+
+.file-name {
+    color: #006ACB;
+    font-weight: 600;
     display: flex;
-    justify-content: flex-end; /* Alinha os botões à direita */
-    margin-top: 10px; /* Espaçamento acima dos botões */
+    align-items: center;
+    gap: 8px;
 }
 
-.add-file-button,
-.edit-reference-button {
-    padding: 5px 10px; /* Diminuindo o tamanho do botão */
-    background-color: #006acb; /* Cor de fundo azul */
-    color: white; /* Cor do texto */
-    border: none; /* Sem borda */
-    border-radius: 4px; /* Bordas arredondadas */
-    cursor: pointer; /* Cursor de pointer ao passar o mouse */
-    transition: background-color 0.3s; /* Transição suave */
-    font-size: 12px; /* Tamanho da fonte menor */
+.file-date {
+    color: #9CA3AF;
+    font-size: 12px;
 }
 
-.add-file-button:hover,
-.edit-reference-button:hover {
-    background-color: #0056a1; /* Cor de fundo ao passar o mouse */
+/* --- BOTÃO DE SALVAR (DESTAQUE) --- */
+.save-button-container {
+    padding: 40px 0;
+    display: flex;
+    justify-content: center;
 }
-  
-  .save-button {
-    margin-top: 20px;
-    padding: 10px 20px;
-    background-color: #006acb;
+
+.btn-publish {
+    background: linear-gradient(135deg, #006ACB 0%, #004D95 100%);
     color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    align-self: center;
-  }
-  
+    font-weight: 800;
+    padding: 18px 60px;
+    border-radius: 9999px;
+    font-size: 18px;
+    box-shadow: 0 10px 25px -5px rgba(0, 106, 203, 0.4);
+    transition: all 0.3s;
+}
+
+.btn-publish:hover {
+    transform: scale(1.05);
+    box-shadow: 0 15px 30px -5px rgba(0, 106, 203, 0.5);
+}
