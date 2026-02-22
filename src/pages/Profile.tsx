@@ -1,91 +1,177 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Button } from '../components/Button';
 import Navbar from '../components/Navbar';
 import ProjectCard from '../components/ProjectCard';
-import { TextArea } from '../components/TextArea';
 import UserIcon from '../assets/UserIcon.svg';
 import { useNavigate } from 'react-router-dom';
 import logoBlockchain from '../assets/logoBlockchain.svg';
-import logoVambora from '../assets/logoVamboraFatec.svg';
-import logoRedeNeural from '../assets/logoRedeneural.svg';
 import { TextBar } from '../components/TextBar';
+
+// Interface do Usuário
+interface UserData {
+    _id: string;
+    name: string;
+    email: string;
+    course: string;
+    bio: string;
+    profileImage?: string; 
+}
 
 const Profile: React.FC = () => {
     const ref = useRef<HTMLButtonElement | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null); 
     const navigate = useNavigate();
+    
+    const [user, setUser] = useState<UserData | null>(null);
+    const [projects, setProjects] = useState<any[]>([]);
+
+    useEffect(() => {
+        const savedUser = localStorage.getItem('@AcadeMe:user');
+        
+        if (!savedUser) {
+            navigate('/Login');
+            return;
+        }
+
+        const parsedUser = JSON.parse(savedUser);
+        setUser(parsedUser);
+
+        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+        fetch(`${apiUrl}/students/${parsedUser._id}/projects`)
+            .then(res => res.json())
+            .then(data => setProjects(data))
+            .catch(err => console.error("Erro ao buscar projetos:", err));
+    }, [navigate]);
+
+    const convertToBase64 = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = (error) => reject(error);
+        });
+    };
+
+    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file && user) {
+            try {
+                const base64 = await convertToBase64(file);
+                const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+                
+                const response = await fetch(`${apiUrl}/students/${user._id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ profileImage: base64 })
+                });
+
+                if (response.ok) {
+                    const updatedUser = await response.json();
+                    setUser(updatedUser);
+                    localStorage.setItem('@AcadeMe:user', JSON.stringify(updatedUser));
+                    alert("Foto de perfil atualizada com sucesso!");
+                }
+            } catch (err) {
+                console.error("Erro ao fazer upload da imagem:", err);
+                alert("Erro ao carregar imagem.");
+            }
+        }
+    };
+
     const handleGoToUpload = () => {
         navigate('/Upload');
     };
 
+    if (!user) return <div className="flex h-screen items-center justify-center font-bold text-blue-600">Carregando...</div>;
+
     return (
-        <div className="Profile flex flex-col h-screen">
-            {/* Barra de navegação */}
+        <div className="Profile flex flex-col min-h-screen">
             <Navbar />
+            
             <div className="profile-section flex flex-col md:flex-row flex-grow">
-                {/* Sidebar do perfil */}
-                <div className="profile-sidebar hidden md:flex flex-col bg-gradient-to-b from-[#003465] to-[#006ACB] w-full min-w-80 md:w-[300px] h-full">
-                    <div className="profile-header p-6">
-                        <img 
-                            src={UserIcon}
-                            alt="Foto de perfil" 
-                            className="profile-image border-2 rounded-full border-white p-2 w-32 h-32 mt-6 mx-auto"
+                
+                {/* Sidebar Dinâmica */}
+                <div className="profile-sidebar hidden md:flex flex-col bg-gradient-to-b from-[#003465] to-[#006ACB] w-full min-w-80 md:w-[350px] shrink-0">
+                    <div className="profile-header p-8">
+                        
+                        {/* INPUT MOVIDO PARA DENTRO DA SIDEBAR PARA EVITAR ERRO DE REFERÊNCIA */}
+                        <input 
+                            type="file" 
+                            ref={fileInputRef} 
+                            onChange={handleImageChange} 
+                            className="hidden" 
+                            accept="image/*" 
                         />
-                        <h1 className="profile-name font-extrabold mt-10 mb-6 text-center text-white">Mikhael Canarinho Nóbrega</h1>
+
+                        {/* IMAGEM COM Z-INDEX E STOP PROPAGATION */}
+                        <img 
+                            src={user.profileImage || UserIcon}
+                            alt="Foto de perfil" 
+                            className="profile-image relative z-50 border-4 rounded-full border-white p-1 w-36 h-36 mt-6 mx-auto object-cover cursor-pointer hover:brightness-110 active:scale-95 transition shadow-lg"
+                            onClick={(e) => {
+                                e.stopPropagation(); // Impede que o clique seja bloqueado por elementos pai
+                                fileInputRef.current?.click();
+                            }}
+                            title="Clique para alterar sua foto"
+                        />
                         
-                        {/* Barra de separação */}
-                        <div className="separator border-b border-white my-4" />
-                        <TextArea background="transparent" textColor="white" placeholder="Descrição do perfil..." className="w-full" />
+                        <h1 className="profile-name font-extrabold mt-8 mb-2 text-center text-white text-2xl">
+                            {user.name}
+                        </h1>
+                        <p className="text-blue-100 text-center text-sm mb-6">{user.email}</p>
                         
-                        {/* Barra de separação */}
-                        <div className="separator border-b border-white my-4" />
-                        <TextArea background="transparent" textColor="white" placeholder="Curso..." className="w-full" />
+                        <div className="separator border-b border-white/20 my-4" />
                         
-                        {/* Barra de separação */}
-                        <div className="separator border-b border-white my-4" />
+                        <label className="text-blue-200 text-xs font-bold uppercase">Biografia</label>
+                        <p className="text-white mt-2 text-sm italic leading-relaxed">
+                            {user.bio || "Escreva algo sobre você..."}
+                        </p>
+                        
+                        <div className="separator border-b border-white/20 my-4" />
+                        
+                        <label className="text-blue-200 text-xs font-bold uppercase">Curso</label>
+                        <p className="text-white mt-2 font-semibold">{user.course}</p>
+                        
+                        <div className="separator border-b border-white/20 my-4" />
 
                         <div className="interest-area">
-                            <h2 className="font-extrabold mt-8 text-white">Áreas de Interesse</h2>
-                            <TextArea background="transparent" textColor="white" placeholder="Áreas de interesse..." className="w-full" />
+                            <h2 className="font-extrabold mt-6 text-white">Áreas de Interesse</h2>
+                            <div className="flex flex-wrap gap-2 mt-3">
+                                <span className="bg-white/20 text-white text-[10px] px-3 py-1 rounded-full uppercase font-bold">Tecnologia</span>
+                                <span className="bg-white/20 text-white text-[10px] px-3 py-1 rounded-full uppercase font-bold">Inovação</span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Área central - Projetos */}
-                <div className="projects-section flex flex-col h-auto w-full">
-                    {/* Filtros */}
-                    <div className="projects-filters flex flex-col sm:flex-row items-center justify-between w-full px-4 sm:px-8 mt-6 md:gap-32 gap-6">
-                        <TextBar type='search' placeholder='Pesquisar projeto...' className="project-search-bar w-auto sm:w-auto mb-4 sm:mb-0 p-2"/>
+                <div className="projects-section flex flex-col h-auto w-full bg-gray-50">
+                    <div className="projects-filters flex flex-col sm:flex-row items-center justify-between w-full px-8 mt-10 gap-6">
+                        <TextBar type='search' placeholder='Pesquisar projeto...' className="project-search-bar w-full sm:w-80 bg-white"/>
 
                         <Button ref={ref} size="default" shape="pill" className="p-4 w-64 justify-center" iconRight='add'
                         onClick={handleGoToUpload}>
                             Novo Projeto
                         </Button>
-
-
                     </div>
-                    {/* Lista de Projetos */}
-                    <div className="projects-list w-full px-4 sm:px-8 mt-6">
-                        <ProjectCard
-                            title="Blockchain"
-                            description="Este trabalho apresenta a tecnologia blockchain, que organiza dados em blocos ligados de forma cronológica..."
-                            tags={["Blockchain", "Criptografia Assimétrica", "Segurança da Informação"]}
-                            date="03/12/2024"
-                            imageUrl={logoBlockchain}
-                        />
-                        <ProjectCard
-                            title="Vambora Fatec"
-                            description="Projeto de aplicativo mobile para agendamento de caronas entre estudantes da Fatec."
-                            tags={["Mobile", "Mobilidade Urbana", "Engenharia de Software"]}
-                            date="15/10/2024"
-                            imageUrl={logoVambora}
-                        />
-                        <ProjectCard
-                            title="Rede Neural para Reconhecimento de Caracteres com Backpropagation"
-                            description="Desenvolvimento de uma rede neural simples na linguagem Python para reconhecimento de padrões..."
-                            tags={["Inteligência Artificial", "Backpropagation"]}
-                            date="23/09/2024"
-                            imageUrl={logoRedeNeural}
-                        />
+
+                    <div className="projects-list w-full px-8 mt-10 space-y-6 pb-10">
+                        {projects.length > 0 ? (
+                            projects.map((proj) => (
+                                <ProjectCard
+                                    key={proj._id}
+                                    title={proj.title}
+                                    description={proj.description}
+                                    tags={proj.tags || ["AcadeMe"]}
+                                    date={new Date(proj.createdAt).toLocaleDateString()}
+                                    imageUrl={logoBlockchain}
+                                />
+                            ))
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-20 opacity-40">
+                                <p className="italic">Nenhum projeto publicado ainda.</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
