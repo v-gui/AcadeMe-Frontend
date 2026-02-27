@@ -1,0 +1,72 @@
+/* StudentCard.css - Atualizado com contorno */
+
+.student-card-v2 {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centraliza tudo horizontalmente */
+    text-align: center;
+    /* subtle shadow remains the same */
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+    /* --- AJUSTE: Borda (contorno) mais definida para visibilidade no fundo branco --- */
+    border: 2px solid #e2e8f0; /* Antes: 1px solid #f1f5f9 */
+    transition: transform 0.2s ease;
+}
+
+.student-card-v2:hover {
+    transform: translateY(-5px);
+}
+
+.student-avatar-wrapper {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    padding: 5px;
+    background: #ffffff;
+    /* --- AJUSTE: Borda do matte mais definida para consistência --- */
+    border: 4px solid #e2e8f0; /* Antes: 4px solid #f1f5f9 */
+    margin-bottom: 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.student-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.student-name-v2 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #003465;
+    margin-bottom: 4px;
+}
+
+.student-course-v2 {
+    font-size: 0.9rem;
+    color: #64748b;
+    margin-bottom: 20px;
+}
+
+.student-portfolio-link {
+    color: #006ACB;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: all 0.2s;
+}
+
+.student-portfolio-link:hover {
+    color: #003465;
+    border-bottom: 1px solid #003465;
+}
+
+.external-icon {
+    font-size: 10px;
+    margin-left: 2px;
+}

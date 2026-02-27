@@ -1,0 +1,231 @@
+/* ProjectView.css */
+
+/* --- PALETTE & TYPOGRAPHY CORE --- */
+:root {
+  --academeblue: #006ACB;
+  --academedenavy: #003465;
+  --maintext: #333333;
+  --secondarytext: #565656;
+  --lightgray: #F0F2F5;
+  --cardborder: #E0E4E9;
+  --white: #FFFFFF;
+}
+
+/* --- MAIN LAYOUT --- */
+.projectview-main {
+  background-color: var(--lightgray);
+  min-height: 100vh;
+  font-family: 'Inter', -apple-system, sans-serif; /* Use sans-serif por padrão, serif para o título principal */
+  color: var(--maintext);
+}
+
+/* --- MAIN HEADER SECTION --- */
+.projectview-header-main {
+  background-color: var(--academedenavy);
+  color: var(--white);
+  padding: 4rem 10rem 3rem 10rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.projectview-header-content {
+  max-width: 80rem;
+  margin: 0 auto;
+  display: flex;
+  gap: 3rem;
+  align-items: flex-start;
+}
+
+.projectview-cover-view {
+  width: 12rem;
+  height: 12rem;
+  background-color: var(--white);
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.projectview-cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.projectview-title-section {
+  flex: 1;
+}
+
+.projectview-title {
+  font-family: 'Georgia', serif; /* Use serif para o título principal, como o do perfil */
+  font-size: 3rem;
+  font-weight: 800;
+  color: var(--white);
+  margin-bottom: 0.5rem;
+}
+
+.projectview-metadata {
+  color: #BED7FB; /* Lighter blue/gray for metadata text */
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.projectview-tags-container-view {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.projectview-tag-view {
+  background-color: var(--academeblue);
+  color: var(--white);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.625rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  letter-spacing: 0.05em;
+}
+
+/* --- MAIN CONTENT AREA --- */
+.projectview-content-main {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 2.5rem 10rem;
+}
+
+.projectview-description-section {
+  background-color: var(--white);
+  padding: 2.5rem;
+  border-radius: 1rem;
+  border: 1px solid var(--cardborder);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  margin-bottom: 2.5rem;
+}
+
+.projectview-description-text {
+  color: var(--secondarytext);
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
+/* --- POSTERS SECTION --- */
+.projectview-section-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.projectview-section-container {
+  background-color: var(--white);
+  padding: 2.5rem;
+  border-radius: 1rem;
+  border: 1px solid var(--cardborder);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.projectview-section-title {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--academedenavy);
+  margin-bottom: 1.5rem;
+}
+
+.projectview-posters-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.projectview-poster-container-view {
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 1px solid var(--cardborder);
+  position: relative;
+}
+
+.projectview-poster-image {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.projectview-poster-title-view {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.5);
+  color: var(--white);
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+/* --- LINKS SECTION --- */
+/* Esta seção recreia o design signature de card, com a borda lateral azul */
+.projectview-related-section {
+  background-color: var(--white);
+  border-radius: 1rem;
+  border: 1px solid var(--cardborder);
+  border-left: 8px solid var(--academeblue); /* Signature Academe blue strip */
+  padding: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.projectview-related-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--academeblue);
+  margin-bottom: 0.25rem;
+}
+
+.projectview-related-desc {
+  color: var(--secondarytext);
+  font-size: 0.875rem;
+}
+
+/* --- PILL-STYLE TAGS (For Related Links or other sections) --- */
+.projectview-pill-tag {
+  background-color: #E6F0F8; /* Light blue accent background */
+  color: var(--academeblue);
+  border-radius: 9999px; /* Pill shape, just like in Profile tags */
+  padding: 0.25rem 0.75rem;
+  font-weight: 700;
+  font-size: 0.625rem;
+  text-transform: uppercase;
+}
+
+/* --- BUTTONS & ACTIONS --- */
+.projectview-actions-view {
+  display: flex;
+  justify-content: center;
+  margin-top: 2.5rem;
+}
+
+/* Estilo para botões primários no formato pill, como o botão "Novo Projeto" */
+.projectview-pill-button {
+  border-radius: 9999px;
+  background-color: var(--academeblue);
+  color: var(--white);
+  padding: 0.75rem 2rem;
+  font-weight: 700;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.projectview-pill-button:hover {
+  background-color: var(--academedenavy);
+  transform: translateY(-1px);
+}
