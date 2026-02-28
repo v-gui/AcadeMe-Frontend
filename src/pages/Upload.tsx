@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/alt-text */
 import React, { useState, useEffect, useRef } from 'react';
 import './Upload.css';
 import logoPlaceholder from '../assets/white-logo.svg'; 
@@ -5,6 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { Icon } from '../components/Icon';
 import { Button } from '../components/Button';
+import { toast } from 'react-toastify'; // Importando as notificações
 
 const Upload: React.FC = () => {
     const navigate = useNavigate();
@@ -52,7 +54,10 @@ const Upload: React.FC = () => {
                     if (data.files) setFiles(data.files);
                     if (data.references) setReferences(data.references);
                 })
-                .catch(err => console.error("Erro ao carregar projeto:", err));
+                .catch(err => {
+                    console.error("Erro ao carregar projeto:", err);
+                    toast.error("Não foi possível carregar os dados do projeto.");
+                });
         } else {
             const savedDraft = localStorage.getItem('@AcadeMe:project_draft');
             if (savedDraft) {
@@ -90,6 +95,7 @@ const Upload: React.FC = () => {
         link.href = base64;
         link.download = fileName;
         link.click();
+        toast.info(`Baixando: ${fileName}`);
     };
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -106,6 +112,7 @@ const Upload: React.FC = () => {
                 });
             }
             setFiles(newFilesArray);
+            toast.success(`${selectedFiles.length} arquivo(s) importado(s).`);
         }
         e.target.value = ''; 
     };
@@ -120,6 +127,7 @@ const Upload: React.FC = () => {
                 newPostersArray.push({ url: base64, name: file.name });
             }
             setPosters(newPostersArray);
+            toast.success("Pôster adicionado com sucesso!");
         }
         e.target.value = '';
     };
@@ -128,12 +136,13 @@ const Upload: React.FC = () => {
         if (refInput.trim()) {
             setReferences([...references, refInput.trim()]);
             setRefInput('');
+            toast.info("Referência adicionada.");
         }
     };
 
     const handleSaveProject = async () => {
         if (!title.trim() || !description.trim()) {
-            alert("Título e Descrição são obrigatórios.");
+            toast.warn("O título e a descrição são obrigatórios!");
             return;
         }
 
@@ -153,14 +162,14 @@ const Upload: React.FC = () => {
 
             if(response.ok) {
                 localStorage.removeItem('@AcadeMe:project_draft');
-                alert(editId ? "Projeto atualizado!" : "Projeto publicado!");
+                toast.success(editId ? "✨ Projeto atualizado!" : "🚀 Projeto publicado com sucesso!");
                 navigate('/Profile');
             } else {
                 const errData = await response.json();
-                alert(`Erro: ${errData.error || "Erro ao salvar"}`);
+                toast.error(`Erro: ${errData.error || "Não foi possível salvar."}`);
             }
         } catch (error) {
-            alert("Erro de conexão. Verifique o tamanho das imagens.");
+            toast.error("📡 Erro de conexão. Verifique o tamanho das fotos.");
         } finally {
             setLoading(false);
         }
@@ -175,7 +184,10 @@ const Upload: React.FC = () => {
                     <div className="relative shrink-0">
                         <input type="file" ref={coverInputRef} onChange={async (e) => {
                             const file = e.target.files?.[0];
-                            if(file) setImagePreview(await convertToBase64(file));
+                            if(file) {
+                                setImagePreview(await convertToBase64(file));
+                                toast.info("Capa do projeto atualizada.");
+                            }
                         }} className="hidden" accept="image/*" />
                         
                         <div onClick={() => coverInputRef.current?.click()} className="w-48 h-48 bg-white rounded-lg flex items-center justify-center p-2 shadow-2xl cursor-pointer hover:scale-105 transition-transform overflow-hidden">
@@ -214,10 +226,11 @@ const Upload: React.FC = () => {
                         {posters.map((p, i) => (
                             <div key={i} className="bg-white p-2 rounded-xl shadow-sm border border-gray-100 relative group">
                                 <img src={p.url} className="rounded-lg w-full h-56 object-cover" alt="Poster" />
-                                
-                                {/* Ajustado: Apenas o botão X flutuando, sem nome de arquivo */}
                                 <button 
-                                    onClick={() => setPosters(posters.filter((_, idx) => idx !== i))} 
+                                    onClick={() => {
+                                        setPosters(posters.filter((_, idx) => idx !== i));
+                                        toast.info("Pôster removido.");
+                                    }} 
                                     className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-lg shadow-md opacity-0 group-hover:opacity-100"
                                 >
                                     ×
@@ -252,7 +265,10 @@ const Upload: React.FC = () => {
                                                 <button onClick={() => file.base64 && handleDownloadFile(file.base64, file.name)} className="hover:underline">{file.name}</button>
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <button onClick={() => setFiles(files.filter((_, idx) => idx !== i))} className="w-8 h-8 inline-flex items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-500 hover:text-white font-bold text-lg">×</button>
+                                                <button onClick={() => {
+                                                    setFiles(files.filter((_, idx) => idx !== i));
+                                                    toast.info("Arquivo removido.");
+                                                }} className="w-8 h-8 inline-flex items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-500 hover:text-white font-bold text-lg">×</button>
                                             </td>
                                         </tr>
                                     ))}
@@ -273,7 +289,6 @@ const Upload: React.FC = () => {
                             <div className="space-y-3">
                                 {references.map((ref, i) => (
                                     <div key={i} className="flex justify-between items-start p-3 bg-gray-50 rounded-lg border-l-4 border-blue-400 group">
-                                        {/* Ajustado: Conteúdo como link clicável */}
                                         <a 
                                             href={ref.startsWith('http') ? ref : `https://${ref}`} 
                                             target="_blank" 
@@ -283,7 +298,10 @@ const Upload: React.FC = () => {
                                             {ref}
                                         </a>
                                         <button 
-                                            onClick={() => setReferences(references.filter((_, idx) => idx !== i))} 
+                                            onClick={() => {
+                                                setReferences(references.filter((_, idx) => idx !== i));
+                                                toast.info("Referência removida.");
+                                            }} 
                                             className="text-red-400 hover:text-red-600 font-bold ml-4 opacity-0 group-hover:opacity-100 transition-opacity"
                                         >
                                             ×

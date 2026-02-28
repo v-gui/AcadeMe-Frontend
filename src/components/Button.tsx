@@ -1,4 +1,4 @@
-import { ButtonHTMLAttributes, FC, forwardRef } from 'react';
+import { ButtonHTMLAttributes, forwardRef } from 'react';
 import { VariantProps, cva } from 'class-variance-authority';
 import { cn } from '../utils/cn';
 import { 
@@ -7,7 +7,7 @@ import {
   FaCheck as check,
   FaSearch as search,
   FaPlus as add,
-} from 'react-icons/fa'; // Importando os ícones com apelidos
+} from 'react-icons/fa';
 
 // Mapeando os apelidos dos ícones
 const iconMap = {
