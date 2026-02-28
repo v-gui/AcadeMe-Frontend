@@ -1,46 +1,51 @@
-# Getting Started with Create React App
+# 🎓 AcadeMe Inc.
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+> **Transformando sua trajetória acadêmica em um portfólio de impacto.** O **AcadeMe** é uma plataforma full-stack desenvolvida para estudantes que desejam centralizar, organizar e dar visibilidade aos seus projetos e conquistas universitárias. O objetivo é conectar o potencial acadêmico diretamente com o mercado de trabalho através de uma vitrine profissional e intuitiva.
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+## 🚀 Funcionalidades
 
-### `npm start`
+### 🔐 Autenticação e Segurança
+- **SignUp Inteligente:** Cadastro com validação de senha em tempo real (mínimo de 6 caracteres, letras maiúsculas e números) e mensagens de erro integradas na interface.
+- **Login Fluido:** Acesso persistente via `localStorage` com feedback visual de carregamento nos botões.
+- **Experiência sem Pop-ups:** Substituição de `alerts` nativos por notificações elegantes via **React Toastify**.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+### 🔍 Descoberta e Vitrine
+- **Header "Freeze":** Barra de navegação fixa no topo com efeito *glassmorphism* (backdrop-blur).
+- **Busca Estilo LinkedIn:** Barra de pesquisa global com dropdown de resultados instantâneos, permitindo filtrar talentos por nome ou curso.
+- **Showcase de Talentos:** Vitrine pública centralizada exibindo cards de estudantes e seus cursos.
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+### 📂 Gestão de Portfólio
+- **Dashboard Privado:** Edição de biografia e gerenciamento de áreas de interesse (competências).
+- **CRUD de Projetos:** Criação, visualização, edição e exclusão de trabalhos.
+- **Upload Completo:** Suporte para capas de projeto, galerias de pôsteres, anexos de arquivos e referências bibliográficas.
+- **Draft System:** Persistência automática de rascunhos no navegador para evitar perda de progresso durante o upload.
 
-### `npm test`
+---
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## 🛠️ Tecnologias Utilizadas
 
-### `npm run build`
+### Frontend
+- **React.js** (com Hooks e Functional Components)
+- **TypeScript** (Tipagem forte para maior segurança no desenvolvimento)
+- **Tailwind CSS** (Estilização moderna e responsiva)
+- **React Router DOM v6** (Gerenciamento de rotas e navegação)
+- **React Toastify** (Sistema de notificações de UX)
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Backend & Banco de Dados
+- **Node.js** (Ambiente de execução)
+- **Express** (Framework para API REST)
+- **MongoDB** (Banco de dados NoSQL para escalabilidade)
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+---
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## 📂 Estrutura do Projeto (Frontend)
 
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+```text
+src/
+├── assets/             # Logos, ícones SVG e ilustrações
+├── components/         # Componentes reutilizáveis (Button, TextBar, Navbar, Cards)
+├── pages/              # Páginas principais (Home, Login, SignUp, Profile, Upload)
+├── index.tsx           # Configuração global (ToastContainer e Rotas)
+└── index.css           # Configurações globais do Tailwind e fontes
