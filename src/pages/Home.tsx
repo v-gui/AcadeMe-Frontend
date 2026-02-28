@@ -179,8 +179,8 @@ const Home: React.FC = () => {
             </section>
 
             {/** 5. FEEDBACK SECTION **/}
-            <section id='feedback-section' className='bg-white py-24 px-6 relative flex flex-col items-center'>
-                <h1 className='text-[#006ACB] font-bold text-[28px] md:text-[40px] mb-20 text-center'>Feedback dos Usuários</h1>
+            <section id='feedback-section' className='bg-gradient-to-r from-[#006ACB] to-[#003465] py-24 px-6 relative flex flex-col items-center'>
+                <h1 className='text-[#ffffff] font-bold text-[28px] md:text-[40px] mb-20 text-center'>Feedback dos Usuários</h1>
                 <div className='feedback-container flex flex-col md:flex-row items-center justify-center gap-8 relative z-10 max-w-7xl mx-auto w-full'>
                     <div className='message-container flex flex-col items-center text-[#F0F2F5] bg-gradient-to-b from-[#006ACB] to-[#003465] w-full md:w-[380px] p-10 rounded-3xl gap-6 shadow-2xl transition-transform hover:scale-105'>
                         <div className='userinfo-container flex items-center gap-4'>
