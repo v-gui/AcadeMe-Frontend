@@ -1,5 +1,5 @@
 /* eslint-disable jsx-a11y/alt-text */
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { Button } from '../components/Button';
 import { TextBar } from '../components/TextBar';
 import logo from '../assets/white-logo.svg';
@@ -16,6 +16,8 @@ import UserIcon from '../assets/UserIcon.svg';
 import './Home.css';
 import { useNavigate } from 'react-router-dom';
 import StudentCard from '../components/StudentCard';
+import { Icon } from '../components/Icon';
+import { toast } from 'react-toastify';
 
 interface Aluno {
     _id: string;
@@ -27,9 +29,14 @@ interface Aluno {
 
 const Home: React.FC = () => {
     const navigate = useNavigate();
+    const menuRef = useRef<HTMLDivElement>(null);
     const [alunos, setAlunos] = useState<Aluno[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+    
+    // Estados para Usuário Logado e Menu
+    const [currentUser, setCurrentUser] = useState<any>(null);
+    const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
 
     useEffect(() => {
         const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
@@ -37,6 +44,19 @@ const Home: React.FC = () => {
             .then((res) => res.json())
             .then((data) => setAlunos(data))
             .catch((err) => console.error("Erro ao carregar vitrine:", err));
+
+        // Verifica se há usuário logado
+        const savedUser = localStorage.getItem('@AcadeMe:user');
+        if (savedUser) setCurrentUser(JSON.parse(savedUser));
+
+        // Fecha menu ao clicar fora
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setIsAccountMenuOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
     const filteredAlunos = useMemo(() => {
@@ -47,18 +67,30 @@ const Home: React.FC = () => {
         );
     }, [alunos, searchTerm]);
 
+    const handleLogout = () => {
+        localStorage.removeItem('@AcadeMe:user');
+        setCurrentUser(null);
+        toast.info("Sessão encerrada.");
+        navigate('/');
+    };
+
     const handleGoToLogin = () => navigate('/login');
     const handleGoToSignUp = () => navigate('/signup');
 
     return (
         <div className="Home relative overflow-x-hidden pt-20"> 
             
-            {/** --- HEADER FIXO (ESTILO LINKEDIN) --- **/}
-            <header className="fixed top-0 left-0 w-full bg-white/95 backdrop-blur-md shadow-md z-[1000] py-3 px-6 md:px-16 border-b border-gray-100">
-                <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-                    <img src={coloredLogo} alt="logo" className="h-10 cursor-pointer" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})} />
+            {/** --- HEADER FIXO ACADEME (EXTREMIDADE A EXTREMIDADE) --- **/}
+            <header className="fixed top-0 left-0 w-full bg-white/95 backdrop-blur-md shadow-md z-[1000] py-3  border-b border-gray-100">
+                <div className="w-full flex items-center justify-between px-6 md:px-12">
                     
-                    <div className="flex-1 max-w-xl relative">
+                    {/* Extremidade Esquerda: Logo */}
+                    <div className="flex-shrink-0">
+                        <img src={coloredLogo} alt="logo" className="h-10 cursor-pointer" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})} />
+                    </div>
+                    
+                    {/* Centro: Barra de Pesquisa */}
+                    <div className="flex-1 max-w-2xl mx-8 relative">
                         <TextBar 
                             variant="default" 
                             placeholder="Pesquisar talentos ou cursos..." 
@@ -72,31 +104,18 @@ const Home: React.FC = () => {
                             onBlur={() => setTimeout(() => setIsDropdownVisible(false), 200)}
                         />
 
-                        {/** DROPDOWN DE RESULTADOS **/}
                         {searchTerm && isDropdownVisible && (
-                            <div className="absolute top-full left-0 w-full bg-white shadow-2xl rounded-b-xl mt-1 border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
+                            <div className="absolute top-full left-0 w-full bg-white shadow-2xl rounded-b-xl mt-1 border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200 text-left">
                                 {filteredAlunos.length > 0 ? (
-                                    <>
-                                        {filteredAlunos.slice(0, 5).map(aluno => (
-                                            <div 
-                                                key={aluno._id}
-                                                onClick={() => navigate(`/student/${aluno._id}`)}
-                                                className="flex items-center gap-3 p-3 hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-50 last:border-none"
-                                            >
-                                                <img src={aluno.profileImage || UserIcon} className="w-8 h-8 rounded-full object-cover border" />
-                                                <div className="flex flex-col text-left">
-                                                    <span className="font-bold text-[#003465] text-xs">{aluno.name}</span>
-                                                    <span className="text-gray-400 text-[10px] uppercase font-bold">{aluno.course}</span>
-                                                </div>
+                                    filteredAlunos.map(aluno => (
+                                        <div key={aluno._id} onClick={() => navigate(`/student/${aluno._id}`)} className="flex items-center gap-3 p-3 hover:bg-blue-50 cursor-pointer border-b last:border-none">
+                                            <img src={aluno.profileImage || UserIcon} className="w-8 h-8 rounded-full object-cover border" />
+                                            <div className="flex flex-col">
+                                                <span className="font-bold text-[#003465] text-xs">{aluno.name}</span>
+                                                <span className="text-gray-400 text-[10px] uppercase font-bold">{aluno.course}</span>
                                             </div>
-                                        ))}
-                                        <button 
-                                            onClick={() => document.getElementById('vitrine-section')?.scrollIntoView({behavior: 'smooth'})}
-                                            className="w-full p-2 text-[10px] font-black text-[#006ACB] uppercase bg-gray-50 hover:bg-gray-100 border-t"
-                                        >
-                                            Ver todos os resultados
-                                        </button>
-                                    </>
+                                        </div>
+                                    ))
                                 ) : (
                                     <div className="p-4 text-center text-gray-400 text-xs italic">Nenhum resultado...</div>
                                 )}
@@ -104,9 +123,45 @@ const Home: React.FC = () => {
                         )}
                     </div>
 
-                    <div className="hidden lg:flex items-center gap-4">
-                        <Button shape="pill" size="sm" className="text-xs font-bold px-6" onClick={handleGoToLogin}>Login</Button>
-                        <Button shape="pill" size="sm" className="text-xs font-bold px-6" onClick={handleGoToSignUp}>Cadastre-se</Button>
+                    {/* Extremidade Direita: Conta ou Login */}
+                    <div className="flex-shrink-0 relative" ref={menuRef}>
+                        {currentUser ? (
+                            <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}>
+                                <div className="hidden md:flex flex-col items-end mr-1">
+                                    <span className="text-[9px] font-black text-[#006ACB] uppercase tracking-widest leading-none">Online</span>
+                                    <span className="text-[#003465] font-bold text-xs">{currentUser.name.split(' ')[0]}</span>
+                                </div>
+                                <img 
+                                    src={currentUser.profileImage || UserIcon} 
+                                    className={`w-10 h-10 rounded-full border-2 transition-all object-cover ${isAccountMenuOpen ? 'border-[#006ACB] shadow-lg scale-105' : 'border-gray-200 group-hover:border-[#006ACB]'}`}
+                                />
+                                
+                                {isAccountMenuOpen && (
+                                    <div className="absolute right-0 mt-[3.5rem] w-72 bg-white rounded-[24px] shadow-[0_20px_50px_rgba(0,52,101,0.15)] border border-gray-100 py-6 z-[1100] animate-in fade-in slide-in-from-top-3 duration-200">
+                                        <div className="px-8 pb-4 border-b border-gray-50 flex flex-col items-center text-center">
+                                            <p className="text-[#006ACB] text-[10px] font-black uppercase tracking-[0.2em] mb-4">Minha Conta</p>
+                                            <img src={currentUser.profileImage || UserIcon} className="w-16 h-16 rounded-full border-4 border-blue-50 p-0.5 object-cover mb-3" />
+                                            <p className="text-[#003465] font-black text-lg tracking-tighter leading-tight truncate w-full">{currentUser.name}</p>
+                                            <p className="text-gray-400 text-xs truncate w-full">{currentUser.email}</p>
+                                        </div>
+                                        <div className="pt-4 px-2 text-left">
+                                            <button onClick={() => navigate('/Profile')} className="w-full flex items-center gap-4 px-6 py-3 text-sm font-bold text-gray-600 hover:bg-blue-50 hover:text-[#006ACB] rounded-xl transition-all">
+                                                Dashboard
+                                            </button>
+                                            <div className="my-2 border-t border-gray-50 mx-4" />
+                                            <button onClick={handleLogout} className="w-full flex items-center gap-4 px-6 py-3 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all">
+                                                Sair da conta
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-4">
+                                <Button shape="pill" size="sm" className="text-xs font-bold px-6" onClick={handleGoToLogin}>Login</Button>
+                                <Button shape="pill" size="sm" className="text-xs font-bold px-6" onClick={handleGoToSignUp}>Cadastre-se</Button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </header>
@@ -161,7 +216,7 @@ const Home: React.FC = () => {
 
             {/** 4. VITRINE DE ALUNOS (NOSSOS TALENTOS) - CENTRALIZADO **/}
             <section id="vitrine-section" className="py-24 bg-gray-50 flex flex-col items-center">
-                <h1 className='text-[#006ACB] font-bold text-[28px] md:text-[40px] mb-20 text-center uppercase tracking-tighter'>Nossos Talentos</h1>
+                <h1 className='text-[#006ACB] font-bold text-[28px] md:text-[40px] mb-20 text-center tracking-tighter'>Nossos Talentos</h1>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 px-8 max-w-7xl w-full">
                     {alunos.map((aluno) => (
                         <StudentCard 
@@ -173,14 +228,14 @@ const Home: React.FC = () => {
                         />
                     ))}
                     {alunos.length === 0 && (
-                        <p className="col-span-full text-center text-gray-400 italic py-10">Aguardando novos talentos se cadastrarem...</p>
+                        <p className="col-span-full text-center text-gray-400 italic py-10">Aguardando novos talentos se cadastrerem...</p>
                     )}
                 </div>
             </section>
 
             {/** 5. FEEDBACK SECTION **/}
-            <section id='feedback-section' className='bg-white py-24 px-6 relative flex flex-col items-center'>
-                <h1 className='text-[#006ACB] font-bold text-[28px] md:text-[40px] mb-20 text-center'>Feedback dos Usuários</h1>
+            <section id='feedback-section' className='bg-gradient-to-r from-[#006ACB] to-[#003465] py-24 px-6 relative flex flex-col items-center'>
+                <h1 className='text-[#ffffff] font-bold text-[28px] md:text-[40px] mb-20 text-center'>Feedback dos Usuários</h1>
                 <div className='feedback-container flex flex-col md:flex-row items-center justify-center gap-8 relative z-10 max-w-7xl mx-auto w-full'>
                     <div className='message-container flex flex-col items-center text-[#F0F2F5] bg-gradient-to-b from-[#006ACB] to-[#003465] w-full md:w-[380px] p-10 rounded-3xl gap-6 shadow-2xl transition-transform hover:scale-105'>
                         <div className='userinfo-container flex items-center gap-4'>
