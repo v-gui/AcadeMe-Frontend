@@ -1,22 +1,33 @@
 /* eslint-disable jsx-a11y/alt-text */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import './Upload.css';
 import logoPlaceholder from '../assets/white-logo.svg'; 
+import coloredLogo from '../assets/colored-logo.svg';
+import UserIcon from '../assets/UserIcon.svg';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import Navbar from '../components/Navbar';
 import { Icon } from '../components/Icon';
 import { Button } from '../components/Button';
-import { toast } from 'react-toastify'; // Importando as notificações
+import { TextBar } from '../components/TextBar';
+import { toast } from 'react-toastify';
+
+interface Aluno {
+    _id: string;
+    name: string;
+    course: string;
+    profileImage?: string; 
+}
 
 const Upload: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const editId = searchParams.get('edit'); 
+    const menuRef = useRef<HTMLDivElement>(null);
     
     const coverInputRef = useRef<HTMLInputElement>(null);
     const fileUploadRef = useRef<HTMLInputElement>(null);
     const posterInputRef = useRef<HTMLInputElement>(null);
 
+    // Estados do Formulário
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [tags, setTags] = useState<string[]>([]);
@@ -30,17 +41,42 @@ const Upload: React.FC = () => {
     const [references, setReferences] = useState<string[]>([]);
     const [refInput, setRefInput] = useState('');
 
+    // Estados do Header (Busca e Menu)
+    const [alunos, setAlunos] = useState<Aluno[]>([]);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+    const [currentUser, setCurrentUser] = useState<any>(null);
+    const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+
+    // Lógica para fechar menu de conta ao clicar fora
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setIsAccountMenuOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     // 1. CARREGAR DADOS INICIAIS
     useEffect(() => {
         const savedUser = localStorage.getItem('@AcadeMe:user');
         if (savedUser) {
-            setUserId(JSON.parse(savedUser)._id);
+            const parsedUser = JSON.parse(savedUser);
+            setUserId(parsedUser._id);
+            setCurrentUser(parsedUser);
         } else {
             navigate('/login');
             return;
         }
+
+        // Busca lista de alunos para a busca global do header
+        fetch(`${apiUrl}/students`)
+            .then(res => res.json())
+            .then(data => setAlunos(data));
 
         if (editId) {
             fetch(`${apiUrl}/projects/${editId}`)
@@ -79,8 +115,22 @@ const Upload: React.FC = () => {
         }
     }, [posters, files, references, title, description, editId]);
 
-    // --- FUNÇÕES AUXILIARES ---
+    // Lógica de Filtro para o Dropdown do Header
+    const filteredAlunos = useMemo(() => {
+        if (!searchTerm) return [];
+        return alunos.filter(aluno => 
+            aluno.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            aluno.course.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [alunos, searchTerm]);
 
+    const handleLogout = () => {
+        localStorage.removeItem('@AcadeMe:user');
+        toast.info("Sessão encerrada.");
+        navigate('/');
+    };
+
+    // --- FUNÇÕES AUXILIARES ---
     const convertToBase64 = (file: File): Promise<string> => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -106,9 +156,7 @@ const Upload: React.FC = () => {
                 const file = selectedFiles[i];
                 const base64 = await convertToBase64(file);
                 newFilesArray.push({
-                    name: file.name,
-                    date: new Date().toLocaleDateString(),
-                    base64: base64
+                    name: file.name, date: new Date().toLocaleDateString(), base64: base64
                 });
             }
             setFiles(newFilesArray);
@@ -127,7 +175,7 @@ const Upload: React.FC = () => {
                 newPostersArray.push({ url: base64, name: file.name });
             }
             setPosters(newPostersArray);
-            toast.success("Pôster adicionado com sucesso!");
+            toast.success("Pôster adicionado!");
         }
         e.target.value = '';
     };
@@ -162,23 +210,106 @@ const Upload: React.FC = () => {
 
             if(response.ok) {
                 localStorage.removeItem('@AcadeMe:project_draft');
-                toast.success(editId ? "✨ Projeto atualizado!" : "🚀 Projeto publicado com sucesso!");
+                toast.success(editId ? "✨ Projeto atualizado!" : "🚀 Projeto publicado!");
                 navigate('/Profile');
             } else {
                 const errData = await response.json();
                 toast.error(`Erro: ${errData.error || "Não foi possível salvar."}`);
             }
         } catch (error) {
-            toast.error("📡 Erro de conexão. Verifique o tamanho das fotos.");
+            toast.error("📡 Erro de conexão.");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="upload-page bg-[#F0F2F5] min-h-screen">
-            <Navbar />
+        <div className="upload-page bg-[#F0F2F5] min-h-screen pt-20">
+            
+            {/** --- HEADER FIXO ACADEME (BORDA A BORDA) --- **/}
+            <header className="fixed top-0 left-0 w-full bg-white/95 backdrop-blur-md shadow-md z-[1000] py-3  border-b border-gray-100">   
+                <div className="w-full flex items-center justify-between px-6 md:px-12">
+                    
+                    {/* Extremidade Esquerda: Logo */}
+                    <div className="flex-shrink-0">
+                        <img src={coloredLogo} alt="logo" className="h-10 cursor-pointer" onClick={() => navigate('/')} />
+                    </div>
+                    
+                    {/* Centro: Barra de Pesquisa */}
+                    <div className="flex-1 max-w-2xl mx-8 relative">
+                        <TextBar 
+                            variant="default" 
+                            placeholder="Buscar talentos para se inspirar..." 
+                            iconLeft="search" 
+                            hideIconsOnInput 
+                            value={searchTerm}
+                            onChange={(e: any) => {
+                                setSearchTerm(e.target.value);
+                                setIsDropdownVisible(true);
+                            }}
+                            onBlur={() => setTimeout(() => setIsDropdownVisible(false), 200)}
+                        />
 
+                        {searchTerm && isDropdownVisible && (
+                            <div className="absolute top-full left-0 w-full bg-white shadow-2xl rounded-b-xl mt-1 border border-gray-100 overflow-hidden text-left animate-in fade-in slide-in-from-top-1 duration-200">
+                                {filteredAlunos.length > 0 ? (
+                                    filteredAlunos.map(aluno => (
+                                        <div key={aluno._id} onClick={() => navigate(`/student/${aluno._id}`)} className="flex items-center gap-3 p-3 hover:bg-blue-50 cursor-pointer border-b last:border-none">
+                                            <img src={aluno.profileImage || UserIcon} className="w-8 h-8 rounded-full object-cover border" />
+                                            <div className="flex flex-col">
+                                                <span className="font-bold text-[#003465] text-xs">{aluno.name}</span>
+                                                <span className="text-gray-400 text-[10px] uppercase font-bold">{aluno.course}</span>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="p-4 text-center text-gray-400 text-xs italic">Nenhum resultado...</div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Extremidade Direita: Menu de Conta */}
+                    <div className="flex-shrink-0 relative" ref={menuRef}>
+                        <div 
+                            className="flex items-center gap-3 cursor-pointer group"
+                            onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
+                        >
+                            <div className="hidden md:flex flex-col items-end mr-1">
+                                <span className="text-[9px] font-black text-[#006ACB] uppercase tracking-widest leading-none">Online</span>
+                                <span className="text-[#003465] font-bold text-xs">{currentUser?.name?.split(' ')[0]}</span>
+                            </div>
+                            <img 
+                                src={currentUser?.profileImage || UserIcon} 
+                                className={`w-10 h-10 rounded-full border-2 transition-all object-cover ${isAccountMenuOpen ? 'border-[#006ACB] shadow-lg scale-105' : 'border-gray-200 group-hover:border-[#006ACB]'}`}
+                            />
+                        </div>
+
+                        {/* Dropdown de Conta (Mini-Página) */}
+                        {isAccountMenuOpen && (
+                            <div className="absolute right-0 mt-4 w-72 bg-white rounded-[24px] shadow-[0_20px_50px_rgba(0,52,101,0.15)] border border-gray-100 py-6 z-[1100] animate-in fade-in slide-in-from-top-3 duration-200">
+                                <div className="px-8 pb-4 border-b border-gray-50 flex flex-col items-center text-center">
+                                    <p className="text-[#006ACB] text-[10px] font-black uppercase tracking-[0.2em] mb-4">Minha Conta</p>
+                                    <img src={currentUser?.profileImage || UserIcon} className="w-16 h-16 rounded-full border-4 border-blue-50 p-0.5 object-cover mb-3" />
+                                    <p className="text-[#003465] font-black text-lg tracking-tighter leading-tight truncate w-full">{currentUser?.name}</p>
+                                    <p className="text-gray-400 text-xs truncate w-full">{currentUser?.email}</p>
+                                </div>
+                                <div className="pt-4 px-2 text-left">
+                                    <button onClick={() => navigate('/Profile')} className="w-full flex items-center gap-4 px-6 py-3 text-sm font-bold text-gray-600 hover:bg-blue-50 hover:text-[#006ACB] rounded-xl transition-all">
+                                        Dashboard
+                                    </button>
+                                    <div className="my-2 border-t border-gray-50 mx-4" />
+                                    <button onClick={handleLogout} className="w-full flex items-center gap-4 px-6 py-3 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all">
+                                        Sair da conta
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </header>
+
+            {/* HEADER DO FORMULÁRIO (DESIGN ORIGINAL) */}
             <header className="bg-[#003465] text-white p-10 shadow-lg">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-8 items-start">
                     <div className="relative shrink-0">
@@ -186,7 +317,7 @@ const Upload: React.FC = () => {
                             const file = e.target.files?.[0];
                             if(file) {
                                 setImagePreview(await convertToBase64(file));
-                                toast.info("Capa do projeto atualizada.");
+                                toast.info("Capa atualizada.");
                             }
                         }} className="hidden" accept="image/*" />
                         
@@ -224,7 +355,7 @@ const Upload: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <input type="file" ref={posterInputRef} onChange={handlePosterUpload} className="hidden" accept="image/*" multiple />
                         {posters.map((p, i) => (
-                            <div key={i} className="bg-white p-2 rounded-xl shadow-sm border border-gray-100 relative group">
+                            <div key={i} className="bg-white p-2 rounded-xl shadow-sm border border-gray-100 relative group text-center">
                                 <img src={p.url} className="rounded-lg w-full h-56 object-cover" alt="Poster" />
                                 <button 
                                     onClick={() => {
@@ -289,23 +420,13 @@ const Upload: React.FC = () => {
                             <div className="space-y-3">
                                 {references.map((ref, i) => (
                                     <div key={i} className="flex justify-between items-start p-3 bg-gray-50 rounded-lg border-l-4 border-blue-400 group">
-                                        <a 
-                                            href={ref.startsWith('http') ? ref : `https://${ref}`} 
-                                            target="_blank" 
-                                            rel="noopener noreferrer"
-                                            className="text-xs text-blue-600 hover:text-blue-800 underline italic break-all flex-1 leading-relaxed"
-                                        >
+                                        <a href={ref.startsWith('http') ? ref : `https://${ref}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-800 underline italic break-all flex-1 leading-relaxed">
                                             {ref}
                                         </a>
-                                        <button 
-                                            onClick={() => {
-                                                setReferences(references.filter((_, idx) => idx !== i));
-                                                toast.info("Referência removida.");
-                                            }} 
-                                            className="text-red-400 hover:text-red-600 font-bold ml-4 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                            ×
-                                        </button>
+                                        <button onClick={() => {
+                                            setReferences(references.filter((_, idx) => idx !== i));
+                                            toast.info("Referência removida.");
+                                        }} className="text-red-400 hover:text-red-600 font-bold ml-4 opacity-0 group-hover:opacity-100 transition-opacity">×</button>
                                     </div>
                                 ))}
                             </div>
