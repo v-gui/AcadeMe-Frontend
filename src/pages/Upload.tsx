@@ -328,7 +328,7 @@ const Upload: React.FC = () => {
 
                     <div className="flex-1 w-full space-y-4">
                         <input className="bg-transparent text-4xl font-black border-none outline-none w-full placeholder:text-white/30" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título do Projeto" />
-                        <p className="text-blue-200 text-sm">Grade Curricular &gt; Análise e Desenvolvimento de Sistemas</p>
+                        <p className="text-blue-200 text-sm">Descrição:</p>
                         <textarea className="bg-transparent border-none outline-none w-full text-lg resize-none placeholder:text-white/50" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descreva seu feito..." rows={2} />
                         
                         <div className="flex flex-wrap items-center gap-2 p-2 bg-white/10 rounded-lg border border-white/20">

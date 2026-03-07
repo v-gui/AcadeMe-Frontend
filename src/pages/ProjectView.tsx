@@ -6,7 +6,7 @@ import { Icon } from '../components/Icon';
 import { Button } from '../components/Button';
 import coloredLogo from '../assets/colored-logo.svg';
 import UserIcon from '../assets/UserIcon.svg';
-import logoPlaceholder from '../assets/QueimaFitLogo.svg';
+import logoPlaceholder from '../assets/white-logo.svg';
 import { TextBar } from '../components/TextBar';
 import { toast } from 'react-toastify';
 
@@ -200,7 +200,7 @@ const ProjectView: React.FC = () => {
                     <img src={project.imageUrl || logoPlaceholder} alt="Capa" className="w-48 h-48 bg-white rounded-lg object-contain p-2 shadow-2xl" />
                     <div className="flex-1">
                         <h1 className="text-4xl font-black mb-2 leading-tight">{project.title}</h1>
-                        <p className="text-blue-200 text-sm mb-4 uppercase font-bold tracking-widest">Análise e Desenvolvimento de Sistemas</p>
+                        <p className="text-blue-200 text-sm mb-4 uppercase font-bold tracking-widest"></p>
                         <p className="text-lg text-white/80 leading-relaxed max-w-3xl">{project.description}</p>
                         <div className="flex flex-wrap gap-2 mt-6">
                             {project.tags?.map((tag: string, i: number) => (

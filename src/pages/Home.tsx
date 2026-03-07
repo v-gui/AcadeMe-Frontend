@@ -18,7 +18,7 @@ import { useNavigate } from 'react-router-dom';
 import StudentCard from '../components/StudentCard';
 import { Icon } from '../components/Icon';
 import { toast } from 'react-toastify';
-
+import Avatar from '../components/Avatar';
 interface Aluno {
     _id: string;
     name: string;
@@ -59,6 +59,14 @@ const Home: React.FC = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    const vitrineAlunos = useMemo(() => {
+        if (alunos.length === 0) return [];
+        // Embaralha a lista e pega os 3 primeiros
+        return [...alunos]
+            .sort(() => 0.5 - Math.random())
+            .slice(0, 3);
+    }, [alunos]);
+
     const filteredAlunos = useMemo(() => {
         if (!searchTerm) return [];
         return alunos.filter(aluno => 
@@ -80,98 +88,107 @@ const Home: React.FC = () => {
     return (
         <div className="Home relative overflow-x-hidden pt-20"> 
             
-            {/** --- HEADER FIXO ACADEME (EXTREMIDADE A EXTREMIDADE) --- **/}
-            <header className="fixed top-0 left-0 w-full bg-white/95 backdrop-blur-md shadow-md z-[1000] py-3  border-b border-gray-100">
-                <div className="w-full flex items-center justify-between px-6 md:px-12">
-                    
-                    {/* Extremidade Esquerda: Logo */}
-                    <div className="flex-shrink-0">
-                        <img src={coloredLogo} alt="logo" className="h-10 cursor-pointer" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})} />
-                    </div>
-                    
-                    {/* Centro: Barra de Pesquisa */}
-                    <div className="flex-1 max-w-2xl mx-8 relative">
-                        <TextBar 
-                            variant="default" 
-                            placeholder="Pesquisar talentos ou cursos..." 
-                            iconLeft="search" 
-                            hideIconsOnInput 
-                            value={searchTerm}
-                            onChange={(e: any) => {
-                                setSearchTerm(e.target.value);
-                                setIsDropdownVisible(true);
-                            }}
-                            onBlur={() => setTimeout(() => setIsDropdownVisible(false), 200)}
-                        />
+            {/** --- HEADER FIXO ACADEME --- **/}
+<header className="fixed top-0 left-0 w-full bg-white/95 backdrop-blur-md shadow-md z-[1000] py-3 border-b border-gray-100">
+    <div className="w-full flex items-center justify-between px-6 md:px-12">
+        
+        {/* Extremidade Esquerda: Logo */}
+        <div className="flex-shrink-0">
+            <img src={coloredLogo} alt="logo" className="h-10 cursor-pointer" onClick={() => navigate('/')} />
+        </div>
+        
+        {/* Centro: Barra de Pesquisa */}
+        <div className="flex-1 max-w-2xl mx-8 relative">
+            <TextBar 
+                variant="default" 
+                placeholder="Pesquisar outros talentos..." 
+                iconLeft="search" 
+                hideIconsOnInput 
+                value={searchTerm}
+                onChange={(e: any) => {
+                    setSearchTerm(e.target.value);
+                    setIsDropdownVisible(true);
+                }}
+                onBlur={() => setTimeout(() => setIsDropdownVisible(false), 200)}
+            />
 
-                        {searchTerm && isDropdownVisible && (
-                            <div className="absolute top-full left-0 w-full bg-white shadow-2xl rounded-b-xl mt-1 border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200 text-left">
-                                {filteredAlunos.length > 0 ? (
-                                    filteredAlunos.map(aluno => (
-                                        <div key={aluno._id} onClick={() => navigate(`/student/${aluno._id}`)} className="flex items-center gap-3 p-3 hover:bg-blue-50 cursor-pointer border-b last:border-none">
-                                            <img src={aluno.profileImage || UserIcon} className="w-8 h-8 rounded-full object-cover border" />
-                                            <div className="flex flex-col">
-                                                <span className="font-bold text-[#003465] text-xs">{aluno.name}</span>
-                                                <span className="text-gray-400 text-[10px] uppercase font-bold">{aluno.course}</span>
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="p-4 text-center text-gray-400 text-xs italic">Nenhum resultado...</div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Extremidade Direita: Conta ou Login */}
-                    <div className="flex-shrink-0 relative" ref={menuRef}>
-                        {currentUser ? (
-                            <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}>
-                                <div className="hidden md:flex flex-col items-end mr-1">
-                                    <span className="text-[9px] font-black text-[#006ACB] uppercase tracking-widest leading-none">Online</span>
-                                    <span className="text-[#003465] font-bold text-xs">{currentUser.name.split(' ')[0]}</span>
+            {searchTerm && isDropdownVisible && (
+                <div className="absolute top-full left-0 w-full bg-white shadow-2xl rounded-b-xl mt-1 border border-gray-100 overflow-hidden text-left">
+                    {filteredAlunos.length > 0 ? (
+                        filteredAlunos.map(aluno => (
+                            <div key={aluno._id} onClick={() => navigate(`/student/${aluno._id}`)} className="flex items-center gap-3 p-3 hover:bg-blue-50 cursor-pointer border-b last:border-none">
+                                {/* Componente Avatar com as propriedades corretas: name e image */}
+                                <Avatar name={aluno.name} image={aluno.profileImage} size="sm" className="border" />
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-[#003465] text-xs">{aluno.name}</span>
+                                    <span className="text-gray-400 text-[10px] uppercase font-bold">{aluno.course}</span>
                                 </div>
-                                <img 
-                                    src={currentUser.profileImage || UserIcon} 
-                                    className={`w-10 h-10 rounded-full border-2 transition-all object-cover ${isAccountMenuOpen ? 'border-[#006ACB] shadow-lg scale-105' : 'border-gray-200 group-hover:border-[#006ACB]'}`}
-                                />
-                                
-                                {isAccountMenuOpen && (
-                                    <div className="absolute right-0 mt-[3.5rem] w-72 bg-white rounded-[24px] shadow-[0_20px_50px_rgba(0,52,101,0.15)] border border-gray-100 py-6 z-[1100] animate-in fade-in slide-in-from-top-3 duration-200">
-                                        <div className="px-8 pb-4 border-b border-gray-50 flex flex-col items-center text-center">
-                                            <p className="text-[#006ACB] text-[10px] font-black uppercase tracking-[0.2em] mb-4">Minha Conta</p>
-                                            <img src={currentUser.profileImage || UserIcon} className="w-16 h-16 rounded-full border-4 border-blue-50 p-0.5 object-cover mb-3" />
-                                            <p className="text-[#003465] font-black text-lg tracking-tighter leading-tight truncate w-full">{currentUser.name}</p>
-                                            <p className="text-gray-400 text-xs truncate w-full">{currentUser.email}</p>
-                                        </div>
-                                        <div className="pt-4 px-2 text-left">
-                                            <button onClick={() => navigate('/Profile')} className="w-full flex items-center gap-4 px-6 py-3 text-sm font-bold text-gray-600 hover:bg-blue-50 hover:text-[#006ACB] rounded-xl transition-all">
-                                                Dashboard
-                                            </button>
-                                            <div className="my-2 border-t border-gray-50 mx-4" />
-                                            <button onClick={handleLogout} className="w-full flex items-center gap-4 px-6 py-3 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all">
-                                                Sair da conta
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
-                        ) : (
-                            <div className="flex items-center gap-4">
-                                <Button shape="pill" size="sm" className="text-xs font-bold px-6" onClick={handleGoToLogin}>Login</Button>
-                                <Button shape="pill" size="sm" className="text-xs font-bold px-6" onClick={handleGoToSignUp}>Cadastre-se</Button>
-                            </div>
-                        )}
-                    </div>
+                        ))
+                    ) : (
+                        <div className="p-4 text-center text-gray-400 text-xs italic">Nenhum resultado...</div>
+                    )}
                 </div>
-            </header>
+            )}
+        </div>
+
+        {/* Extremidade Direita: Menu de Conta ou Botões de Login */}
+        <div className="flex-shrink-0 relative" ref={menuRef}>
+            {currentUser ? (
+                <div 
+                    className="flex items-center gap-3 cursor-pointer group"
+                    onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
+                >
+                    <div className="hidden md:flex flex-col items-end mr-1">
+                        <span className="text-[9px] font-black text-[#006ACB] uppercase tracking-widest leading-none">Online</span>
+                        <span className="text-[#003465] font-bold text-xs">{currentUser.name.split(' ')[0]}</span>
+                    </div>
+                    <Avatar 
+                        name={currentUser.name} 
+                        image={currentUser.profileImage} 
+                        size="md" 
+                        className={`border-2 transition-all ${isAccountMenuOpen ? 'border-[#006ACB] shadow-lg scale-105' : 'border-gray-200 group-hover:border-[#006ACB]'}`} 
+                    />
+                    
+                    {isAccountMenuOpen && (
+                        <div className="absolute right-0 mt-4 w-72 bg-white rounded-[24px] shadow-[0_20px_50px_rgba(0,52,101,0.15)] border border-gray-100 py-6 z-[1100] animate-in fade-in slide-in-from-top-3 duration-200">
+                            <div className="px-8 pb-4 border-b border-gray-50 flex flex-col items-center text-center">
+                                <p className="text-[#006ACB] text-[10px] font-black uppercase tracking-[0.2em] mb-4">Conta AcadeMe</p>
+                                <Avatar name={currentUser.name} image={currentUser.profileImage} size="lg" className="border-4 border-blue-50 p-0.5 mb-3" />
+                                <p className="text-[#003465] font-black text-lg tracking-tighter leading-tight truncate w-full">{currentUser.name}</p>
+                                <p className="text-gray-400 text-xs truncate w-full">{currentUser.email}</p>
+                            </div>
+                            <div className="pt-4 px-2 text-left">
+                                <button onClick={() => navigate('/Profile')} className="w-full flex items-center gap-4 px-6 py-3 text-sm font-bold text-gray-600 hover:bg-blue-50 hover:text-[#006ACB] rounded-xl transition-all group">
+                                    Meu Perfil
+                                </button>
+                                <div className="my-2 border-t border-gray-50 mx-4" />
+                                <button onClick={handleLogout} className="w-full flex items-center gap-4 px-6 py-3 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all group">
+                                    Sair da conta
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                        </div>
+                            ) : (
+                                <div className="flex items-center gap-4">
+                                    <Button shape="pill" size="sm" className="text-xs font-bold px-6" onClick={() => navigate('/login')}>Login</Button>
+                                    <Button shape="pill" size="sm" className="text-xs font-bold px-6" onClick={() => navigate('/signup')}>Cadastre-se</Button>
+                                </div>
+                            )}
+                        </div>
+            </div>
+        </header>
+
+
+            
 
             {/** 1. TOP SECTION (HERO) **/}
             <section id="top-section" className="bg-gradient-to-br from-[#006ACB] to-[#003465] min-h-[90vh] flex items-center justify-center">
-                <div className="top-container flex flex-col items-center justify-center text-center w-full px-6">
+                 <div className="top-container flex flex-col items-center justify-center text-center w-full px-6">
                     <img src={logo} alt="logo" className="w-32 md:w-48 mb-8" />
                     <h1 className='slogan text-[#f4f0f5] text-[32px] md:text-[50px] mb-[21px] font-medium leading-tight'>
-                        Seja bem-vindo ao seu<br/>futuro acadêmico
+                         Seja bem-vindo ao seu<br/>futuro acadêmico
                     </h1>
                     <div className="top-buttons-container flex flex-col md:flex-row items-center justify-center gap-4">
                         <Button size='default' shape='pill' className='font-bold min-w-[171px] hover:bg-black flex items-center justify-center gap-2 transition-all' onClick={handleGoToSignUp}>
@@ -182,7 +199,7 @@ const Home: React.FC = () => {
                         </Button>
                     </div>
                 </div>
-            </section>
+             </section>
 
             {/** 2. SEARCH SECTION (O QUE É) **/}
             <section id="search-section" className="relative h-screen flex items-center justify-center px-8 md:px-16 bg-white">
@@ -218,7 +235,7 @@ const Home: React.FC = () => {
             <section id="vitrine-section" className="py-24 bg-gray-50 flex flex-col items-center">
                 <h1 className='text-[#006ACB] font-bold text-[28px] md:text-[40px] mb-20 text-center tracking-tighter'>Nossos Talentos</h1>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 px-8 max-w-7xl w-full">
-                    {alunos.map((aluno) => (
+                    {vitrineAlunos.map((aluno) => (
                         <StudentCard 
                             key={aluno._id}
                             id={aluno._id}
@@ -228,7 +245,7 @@ const Home: React.FC = () => {
                         />
                     ))}
                     {alunos.length === 0 && (
-                        <p className="col-span-full text-center text-gray-400 italic py-10">Aguardando novos talentos se cadastrerem...</p>
+                        <p className="col-span-full text-center text-gray-400 italic py-10">Aguardando novos talentos se cadastrarem...</p>
                     )}
                 </div>
             </section>

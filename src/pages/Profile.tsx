@@ -2,13 +2,13 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { Button } from '../components/Button';
 import ProjectCard from '../components/ProjectCard';
-import UserIcon from '../assets/UserIcon.svg';
 import coloredLogo from '../assets/colored-logo.svg'; 
 import { useNavigate } from 'react-router-dom';
 import logoBlockchain from '../assets/logoBlockchain.svg';
 import { TextBar } from '../components/TextBar';
 import { Icon } from '../components/Icon';
 import { toast } from 'react-toastify';
+import Avatar from '../components/Avatar';
 
 interface UserData {
     _id: string;
@@ -21,11 +21,14 @@ interface UserData {
 }
 
 const INTEREST_OPTIONS = [
-    "Tecnologia", "Inovação", "Design", "Economia", 
-    "Marketing", "Educação", "Ciência", "Artes", 
-    "Gestão", "Programação", "Saúde", "Direito",
-    "Python", "React", "Node.js", "Blockchain", "Inteligência Artificial"
-];
+    "Tecnologia", "Inovação", "Programação", "Python", "React", "Node.js", "Blockchain", 
+    "Inteligência Artificial", "Cibersegurança", "Data Science", "Mobile Dev", "Cloud Computing",
+    "Design", "UX/UI Design", "Branding", "Economia", "Marketing", "Marketing Digital", 
+    "Gestão", "Empreendedorismo", "Finanças", "RH", "Logística",
+    "Educação", "Ciência", "Artes", "Saúde", "Direito", "Psicologia", "Sociologia", 
+    "Filosofia", "História", "Relações Internacionais", "Comunicação",
+    "Sustentabilidade", "Fotografia", "Escrita Criativa", "Liderança", "Projetos Sociais"
+].sort();
 
 const Profile: React.FC = () => {
     const fileInputRef = useRef<HTMLInputElement>(null); 
@@ -191,12 +194,10 @@ const Profile: React.FC = () => {
             <header className="fixed top-0 left-0 w-full bg-white/95 backdrop-blur-md shadow-md z-[1000] py-3  border-b border-gray-100">            
                 <div className="w-full flex items-center justify-between px-6 md:px-12">
                     
-                    {/* Extremidade Esquerda: Logo */}
                     <div className="flex-shrink-0">
                         <img src={coloredLogo} alt="logo" className="h-10 cursor-pointer" onClick={() => navigate('/')} />
                     </div>
                     
-                    {/* Centro: Barra de Pesquisa */}
                     <div className="flex-1 max-w-2xl mx-8 relative">
                         <TextBar 
                             variant="default" 
@@ -211,12 +212,13 @@ const Profile: React.FC = () => {
                             onBlur={() => setTimeout(() => setIsDropdownVisible(false), 200)}
                         />
 
-                        {searchTerm && isDropdownVisible && (
+                        {searchTerm && isDropdownVisible && !isEditingInterests && (
                             <div className="absolute top-full left-0 w-full bg-white shadow-2xl rounded-b-xl mt-1 border border-gray-100 overflow-hidden text-left">
                                 {filteredAlunos.length > 0 ? (
                                     filteredAlunos.map(aluno => (
                                         <div key={aluno._id} onClick={() => navigate(`/student/${aluno._id}`)} className="flex items-center gap-3 p-3 hover:bg-blue-50 cursor-pointer border-b last:border-none">
-                                            <img src={aluno.profileImage || UserIcon} className="w-8 h-8 rounded-full object-cover border" />
+                                            {/* Alteração: Avatar na busca de alunos */}
+                                            <Avatar name={aluno.name} image={aluno.profileImage} size="sm" className="border" />
                                             <div className="flex flex-col">
                                                 <span className="font-bold text-[#003465] text-xs">{aluno.name}</span>
                                                 <span className="text-gray-400 text-[10px] uppercase font-bold">{aluno.course}</span>
@@ -230,7 +232,6 @@ const Profile: React.FC = () => {
                         )}
                     </div>
 
-                    {/* Extremidade Direita: Menu de Conta */}
                     <div className="flex-shrink-0 relative" ref={menuRef}>
                         <div 
                             className="flex items-center gap-3 cursor-pointer group"
@@ -240,18 +241,21 @@ const Profile: React.FC = () => {
                                 <span className="text-[9px] font-black text-[#006ACB] uppercase tracking-widest leading-none">Online</span>
                                 <span className="text-[#003465] font-bold text-xs">{user.name.split(' ')[0]}</span>
                             </div>
-                            <img 
-                                src={user.profileImage || UserIcon} 
-                                className={`w-10 h-10 rounded-full border-2 transition-all object-cover ${isAccountMenuOpen ? 'border-[#006ACB] shadow-lg scale-105' : 'border-gray-200 group-hover:border-[#006ACB]'}`}
+                            {/* Alteração: Avatar no Header principal */}
+                            <Avatar 
+                                name={user.name} 
+                                image={user.profileImage} 
+                                size="md" 
+                                className={`border-2 ${isAccountMenuOpen ? 'border-[#006ACB] shadow-lg scale-105' : 'border-gray-200 group-hover:border-[#006ACB]'}`} 
                             />
                         </div>
 
-                        {/* Dropdown Estilizado (Alinhado à direita) */}
                         {isAccountMenuOpen && (
                             <div className="absolute right-0 mt-4 w-72 bg-white rounded-[24px] shadow-[0_20px_50px_rgba(0,52,101,0.15)] border border-gray-100 py-6 z-[1100] animate-in fade-in slide-in-from-top-3 duration-200">
                                 <div className="px-8 pb-4 border-b border-gray-50 flex flex-col items-center text-center">
                                     <p className="text-[#006ACB] text-[10px] font-black uppercase tracking-[0.2em] mb-4">Conta AcadeMe</p>
-                                    <img src={user.profileImage || UserIcon} className="w-16 h-16 rounded-full border-4 border-blue-50 p-0.5 object-cover mb-3" />
+                                    {/* Alteração: Avatar no Menu Dropdown */}
+                                    <Avatar name={user.name} image={user.profileImage} size="lg" className="border-4 border-blue-50 p-0.5 mb-3" />
                                     <p className="text-[#003465] font-black text-lg tracking-tighter leading-tight truncate w-full">{user.name}</p>
                                     <p className="text-gray-400 text-xs truncate w-full">{user.email}</p>
                                 </div>
@@ -295,19 +299,30 @@ const Profile: React.FC = () => {
                     <div className="profile-header flex flex-col items-center">
                         <input type="file" ref={fileInputRef} onChange={handleImageChange} className="hidden" accept="image/*" />
                         <div className="relative group">
-                            <img src={user.profileImage || UserIcon} className="profile-image border-4 rounded-full border-white/30 p-1 w-36 h-36 mt-6 object-cover cursor-pointer hover:scale-105 transition shadow-xl" onClick={() => fileInputRef.current?.click()} />
-                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                            {/* Alteração: Avatar na Sidebar (Foto Principal) */}
+                            <Avatar 
+                                name={user.name} 
+                                image={user.profileImage} 
+                                size="xl" 
+                                className="border-4 border-white/30 p-1 mt-6 cursor-pointer hover:scale-105 shadow-xl"
+                                onClick={() => fileInputRef.current?.click()} 
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none mt-6">
                                 <span className="bg-black/50 text-white text-[8px] px-2 py-1 rounded-full uppercase font-bold">Trocar Foto</span>
                             </div>
                         </div>
                         <h1 className="profile-name font-black mt-6 text-center text-2xl tracking-tighter leading-tight">{user.name}</h1>
                         <p className="text-blue-100/70 text-center text-sm mb-6 font-medium">{user.email}</p>
+                        
                         <div className="w-full border-b border-white/10 my-4" />
+                        
                         <div className="w-full mb-6 text-left">
                             <label className="text-blue-200 text-[10px] font-black uppercase tracking-widest">Curso</label>
                             <p className="text-white mt-2 font-bold text-sm leading-snug">{user.course}</p>
                         </div>
+
                         <div className="w-full border-b border-white/10 my-4" />
+
                         <div className="w-full group text-left">
                             <div className="flex justify-between items-center mb-2">
                                 <label className="text-blue-200 text-[10px] font-black uppercase tracking-widest">Biografia</label>
@@ -323,28 +338,83 @@ const Profile: React.FC = () => {
                                 <p className="text-white text-sm italic leading-relaxed opacity-90">{user.bio || "Escreva uma breve biografia..."}</p>
                             )}
                         </div>
+
                         <div className="w-full border-b border-white/10 my-6" />
+
                         <div className="interest-area w-full text-left">
                             <div className="flex justify-between items-center mb-4">
                                 <h2 className="font-black text-white text-[11px] uppercase tracking-widest">Interesses</h2>
-                                <button onClick={() => setIsEditingInterests(!isEditingInterests)} className="text-[10px] font-bold underline text-blue-200 hover:text-white">{isEditingInterests ? "Pronto" : "Gerenciar"}</button>
+                                <button 
+                                    onClick={() => { 
+                                        setIsEditingInterests(!isEditingInterests); 
+                                        setSearchTerm(""); 
+                                    }} 
+                                    className="text-[10px] font-bold underline text-blue-200 hover:text-white"
+                                >
+                                    {isEditingInterests ? "Pronto" : "Gerenciar"}
+                                </button>
                             </div>
+
+                            {isEditingInterests && (
+                                <div className="relative mb-4 animate-in fade-in slide-in-from-top-1">
+                                    <input 
+                                        type="text"
+                                        placeholder="Procurar interesse..."
+                                        className="w-full bg-white/10 border border-white/20 rounded-xl p-2.5 text-xs text-white placeholder:text-blue-200/50 focus:outline-none focus:border-white/50 transition-all"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        autoFocus
+                                    />
+                                    
+                                    {searchTerm && filteredOptions.length > 0 && (
+                                        <div className="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-2xl overflow-hidden border border-gray-100">
+                                            {filteredOptions.slice(0, 6).map(option => (
+                                                <div 
+                                                    key={option}
+                                                    onClick={() => addInterest(option)}
+                                                    className="px-4 py-2.5 text-[11px] font-black text-[#003465] hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-none uppercase flex justify-between items-center group"
+                                                >
+                                                    {option}
+                                                    <span className="text-blue-400 opacity-0 group-hover:opacity-100">+</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             <div className="flex flex-wrap gap-2 mb-6">
                                 {user.interests.map((interest, i) => (
-                                    <div key={i} className="flex items-center gap-2 bg-white/20 text-white text-[10px] px-3 py-1 rounded-full uppercase font-bold border border-white/10 shadow-sm transition-all hover:bg-white/30">
+                                    <div 
+                                        key={i} 
+                                        className={`flex items-center gap-2 text-[10px] px-3 py-1.5 rounded-full uppercase font-bold border transition-all ${
+                                            isEditingInterests 
+                                            ? "bg-white text-[#003465] border-white animate-pulse shadow-md" 
+                                            : "bg-white/20 text-white border-white/10"
+                                        }`}
+                                    >
                                         {interest}
-                                        {isEditingInterests && <button onClick={() => removeInterest(interest)} className="hover:text-red-300 transition-colors">✕</button>}
+                                        {isEditingInterests && (
+                                            <button 
+                                                onClick={() => removeInterest(interest)} 
+                                                className="hover:text-red-500 transition-colors bg-gray-100 rounded-full w-4 h-4 flex items-center justify-center text-[8px]"
+                                            >
+                                                ✕
+                                            </button>
+                                        )}
                                     </div>
                                 ))}
+                                {user.interests.length === 0 && !isEditingInterests && (
+                                    <p className="text-blue-200/40 text-[10px] italic">Nenhum interesse selecionado.</p>
+                                )}
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* ÁREA DE PROJETOS */}
                 <div className="projects-section flex flex-col h-auto w-full bg-gray-50 p-6 md:p-12 overflow-y-auto">
                     <div className="projects-filters flex flex-col lg:flex-row items-center justify-between w-full mb-10 gap-6">
-                        <div className="w-full lg:w-[400px]">                             
+                        <div className="w-full lg:w-[400px]">                                                
                             <TextBar 
                                 type='search' 
                                 placeholder='O que você quer encontrar no seu portfólio?'                                 
