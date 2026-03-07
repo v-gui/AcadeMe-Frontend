@@ -5,10 +5,10 @@ import ProjectCard from '../components/ProjectCard';
 import { TextBar } from '../components/TextBar';
 import { Button } from '../components/Button';
 import { Icon } from '../components/Icon';
-import UserIcon from '../assets/UserIcon.svg';
 import coloredLogo from '../assets/colored-logo.svg';
 import logoBlockchain from '../assets/logoBlockchain.svg';
 import { toast } from 'react-toastify';
+import Avatar from '../components/Avatar'; // Importando o componente reutilizável
 
 interface Aluno {
     _id: string;
@@ -37,7 +37,6 @@ const StudentProfileView: React.FC = () => {
 
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
-    // Lógica para fechar menu ao clicar fora
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -49,30 +48,25 @@ const StudentProfileView: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        // 1. Verifica se existe usuário logado para o Header
         const savedUser = localStorage.getItem('@AcadeMe:user');
         if (savedUser) setCurrentUser(JSON.parse(savedUser));
 
-        // 2. Busca os dados do estudante visualizado (Perfil do dono)
         fetch(`${apiUrl}/students/${id}`)
             .then(res => res.json())
             .then(data => setStudent(data))
             .catch(err => console.error("Erro ao carregar estudante:", err));
 
-        // 3. Busca os projetos do estudante visualizado
         fetch(`${apiUrl}/students/${id}/projects`)
             .then(res => res.json())
             .then(data => setProjects(data))
             .catch(err => console.error("Erro ao carregar projetos:", err));
 
-        // 4. Busca lista de todos os alunos (para a busca global no header)
         fetch(`${apiUrl}/students`)
             .then(res => res.json())
             .then(data => setAlunos(data))
             .catch(err => console.error("Erro ao carregar lista de alunos:", err));
     }, [id, apiUrl]);
 
-    // Lógica de Filtro para o Dropdown do Header
     const filteredAlunos = useMemo(() => {
         if (!searchTerm) return [];
         return alunos.filter(aluno => 
@@ -92,16 +86,14 @@ const StudentProfileView: React.FC = () => {
     return (
         <div className="flex flex-col min-h-screen bg-gray-50 pt-20"> 
             
-            {/** --- HEADER FIXO ACADEME (EXTREMIDADE A EXTREMIDADE) --- **/}
-            <header className="fixed top-0 left-0 w-full bg-white/95 backdrop-blur-md shadow-md z-[1000] py-3  border-b border-gray-100">   
+            {/** --- HEADER FIXO ACADEME --- **/}
+            <header className="fixed top-0 left-0 w-full bg-white/95 backdrop-blur-md shadow-md z-[1000] py-3 border-b border-gray-100">   
                 <div className="w-full flex items-center justify-between px-6 md:px-12">
                     
-                    {/* Extremidade Esquerda: Logo */}
                     <div className="flex-shrink-0">
                         <img src={coloredLogo} alt="logo" className="h-10 cursor-pointer" onClick={() => navigate('/')} />
                     </div>
                     
-                    {/* Centro: Barra de Pesquisa Global */}
                     <div className="flex-1 max-w-2xl mx-8 relative">
                         <TextBar 
                             variant="default" 
@@ -121,7 +113,8 @@ const StudentProfileView: React.FC = () => {
                                 {filteredAlunos.length > 0 ? (
                                     filteredAlunos.map(aluno => (
                                         <div key={aluno._id} onClick={() => navigate(`/student/${aluno._id}`)} className="flex items-center gap-3 p-3 hover:bg-blue-50 cursor-pointer border-b last:border-none">
-                                            <img src={aluno.profileImage || UserIcon} className="w-8 h-8 rounded-full object-cover border" />
+                                            {/* Avatar na busca global */}
+                                            <Avatar name={aluno.name} image={aluno.profileImage} size="sm" className="border" />
                                             <div className="flex flex-col">
                                                 <span className="font-bold text-[#003465] text-xs">{aluno.name}</span>
                                                 <span className="text-gray-400 text-[10px] uppercase font-bold">{aluno.course}</span>
@@ -135,7 +128,6 @@ const StudentProfileView: React.FC = () => {
                         )}
                     </div>
 
-                    {/* Extremidade Direita: Menu de Conta (Logado) ou Auth (Deslogado) */}
                     <div className="flex-shrink-0 relative" ref={menuRef}>
                         {currentUser ? (
                             <div 
@@ -146,16 +138,20 @@ const StudentProfileView: React.FC = () => {
                                     <span className="text-[9px] font-black text-[#006ACB] uppercase tracking-widest leading-none">Online</span>
                                     <span className="text-[#003465] font-bold text-xs">{currentUser.name.split(' ')[0]}</span>
                                 </div>
-                                <img 
-                                    src={currentUser.profileImage || UserIcon} 
-                                    className={`w-10 h-10 rounded-full border-2 transition-all object-cover ${isAccountMenuOpen ? 'border-[#006ACB] shadow-lg scale-105' : 'border-gray-200 group-hover:border-[#006ACB]'}`}
+                                {/* Avatar do usuário logado no Header */}
+                                <Avatar 
+                                    name={currentUser.name} 
+                                    image={currentUser.profileImage} 
+                                    size="md" 
+                                    className={`border-2 transition-all ${isAccountMenuOpen ? 'border-[#006ACB] shadow-lg scale-105' : 'border-gray-200 group-hover:border-[#006ACB]'}`} 
                                 />
                                 
                                 {isAccountMenuOpen && (
                                     <div className="absolute right-0 mt-[3.5rem] w-72 bg-white rounded-[24px] shadow-[0_20px_50px_rgba(0,52,101,0.15)] border border-gray-100 py-6 z-[1100] animate-in fade-in slide-in-from-top-3 duration-200">
                                         <div className="px-8 pb-4 border-b border-gray-50 flex flex-col items-center text-center">
                                             <p className="text-[#006ACB] text-[10px] font-black uppercase tracking-[0.2em] mb-4">Minha Conta</p>
-                                            <img src={currentUser.profileImage || UserIcon} className="w-16 h-16 rounded-full border-4 border-blue-50 p-0.5 object-cover mb-3" />
+                                            {/* Avatar dentro do menu de conta */}
+                                            <Avatar name={currentUser.name} image={currentUser.profileImage} size="lg" className="border-4 border-blue-50 p-0.5 mb-3" />
                                             <p className="text-[#003465] font-black text-lg tracking-tighter leading-tight truncate w-full">{currentUser.name}</p>
                                             <p className="text-gray-400 text-xs truncate w-full">{currentUser.email}</p>
                                         </div>
@@ -183,13 +179,15 @@ const StudentProfileView: React.FC = () => {
 
             <div className="flex flex-col md:flex-row flex-grow">
                 
-                {/* SIDEBAR DO ESTUDANTE (TARGET) */}
+                {/* SIDEBAR DO ESTUDANTE VISUALIZADO */}
                 <div className="w-full md:w-[350px] bg-gradient-to-b from-[#003465] to-[#006ACB] p-10 text-white shrink-0 shadow-2xl">
                     <div className="flex flex-col items-center">
-                        <img 
-                            src={student.profileImage || UserIcon} 
-                            className="w-40 h-40 rounded-full border-4 border-white/30 p-1 object-cover shadow-2xl mb-8" 
-                            alt={student.name}
+                        {/* Avatar grande do estudante que é dono do perfil */}
+                        <Avatar 
+                            name={student.name} 
+                            image={student.profileImage} 
+                            size="xl" 
+                            className="border-4 border-white/30 p-1 shadow-2xl mb-8" 
                         />
                         <h1 className="text-3xl font-black text-center mb-2 tracking-tighter">{student.name}</h1>
                         <p className="text-blue-100/70 text-center text-sm mb-8">{student.email}</p>
@@ -232,7 +230,6 @@ const StudentProfileView: React.FC = () => {
                     </div>
                 </div>
 
-                {/* ÁREA DE PROJETOS DO ESTUDANTE (TARGET) */}
                 <div className="flex-1 p-12 overflow-y-auto">
                     <h2 className="text-2xl font-black text-[#003465] mb-10 border-b-4 border-[#006ACB] w-fit pb-2 uppercase tracking-tighter text-left">
                         Portfólio Acadêmico
