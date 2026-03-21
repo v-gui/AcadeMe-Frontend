@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/alt-text */
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
@@ -12,6 +13,7 @@ import Upload from './pages/Upload';
 import ProjectView from './pages/ProjectView'; 
 import StudentProfileView from './pages/StudentProfileView';
 import reportWebVitals from './reportWebVitals';
+import MainLayout from './components/MainLayout';
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
@@ -24,27 +26,24 @@ root.render(
       <ToastContainer 
         position="top-right"
         autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
         theme="colored"
       />
       
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />        
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/upload" element={<Upload />} />
-        
-        {/* Rotas de Visualizações */}
-        <Route path="/project/:id" element={<ProjectView />} />
-        <Route path="/student/:id" element={<StudentProfileView />} />
-      </Routes>
+      {/* O MainLayout envolve todas as rotas para garantir o alinhamento global */}
+      <MainLayout>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />        
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/upload" element={<Upload />} />
+          
+          {/* Rotas de Visualizações */}
+          <Route path="/project/:id" element={<ProjectView />} />
+          <Route path="/student/:id" element={<StudentProfileView />} />
+        </Routes>
+      </MainLayout>
+
     </Router>
   </React.StrictMode>
 );

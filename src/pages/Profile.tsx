@@ -33,11 +33,13 @@ const INTEREST_OPTIONS = [
 const Profile: React.FC = () => {
     const fileInputRef = useRef<HTMLInputElement>(null); 
     const menuRef = useRef<HTMLDivElement>(null); 
+    const inviteMenuRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
     
     const [user, setUser] = useState<UserData | null>(null);
     const [projects, setProjects] = useState<any[]>([]);
     const [alunos, setAlunos] = useState<any[]>([]); 
+    const [invites, setInvites] = useState<any[]>([]); 
 
     const [isEditingBio, setIsEditingBio] = useState(false);
     const [tempBio, setTempBio] = useState("");
@@ -47,6 +49,7 @@ const Profile: React.FC = () => {
 
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
     const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false); 
+    const [isInviteMenuOpen, setIsInviteMenuOpen] = useState(false);
 
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [idToDelete, setIdToDelete] = useState<string | null>(null);
@@ -54,10 +57,27 @@ const Profile: React.FC = () => {
 
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
+    const fetchProjects = (userId: string) => {
+        fetch(`${apiUrl}/students/${userId}/projects`)
+            .then(res => res.json())
+            .then(data => setProjects(data))
+            .catch(() => toast.error("Erro ao carregar projetos."));
+    };
+
+    const fetchInvites = (userId: string) => {
+        fetch(`${apiUrl}/students/${userId}/invites`)
+            .then(res => res.json())
+            .then(data => setInvites(data))
+            .catch(() => console.error("Erro ao buscar convites"));
+    };
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
                 setIsAccountMenuOpen(false);
+            }
+            if (inviteMenuRef.current && !inviteMenuRef.current.contains(event.target as Node)) {
+                setIsInviteMenuOpen(false);
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
@@ -78,15 +98,32 @@ const Profile: React.FC = () => {
         });
         setTempBio(parsedUser.bio || "");
 
-        fetch(`${apiUrl}/students/${parsedUser._id}/projects`)
-            .then(res => res.json())
-            .then(data => setProjects(data))
-            .catch(() => toast.error("Erro ao carregar projetos."));
+        fetchProjects(parsedUser._id);
+        fetchInvites(parsedUser._id);
 
         fetch(`${apiUrl}/students`)
             .then(res => res.json())
             .then(data => setAlunos(data));
     }, [navigate, apiUrl]);
+
+    const handleRespondInvite = async (projectId: string, status: 'accepted' | 'declined') => {
+        if (!user) return;
+        try {
+            const response = await fetch(`${apiUrl}/projects/${projectId}/respond-invite`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ studentId: user._id, status })
+            });
+
+            if (response.ok) {
+                toast.success(status === 'accepted' ? "✨ Equipe atualizada!" : "Convite recusado.");
+                setInvites(prev => prev.filter(i => i._id !== projectId));
+                if (status === 'accepted') fetchProjects(user._id);
+            }
+        } catch (err) {
+            toast.error("Erro ao processar convite.");
+        }
+    };
 
     const handleLogout = () => {
         localStorage.removeItem('@AcadeMe:user');
@@ -108,14 +145,6 @@ const Profile: React.FC = () => {
             proj.description.toLowerCase().includes(projectSearchTerm.toLowerCase())
         );
     }, [projects, projectSearchTerm]);
-
-    const filteredOptions = useMemo(() => {
-        if (!searchTerm) return [];
-        return INTEREST_OPTIONS.filter(option => 
-            option.toLowerCase().includes(searchTerm.toLowerCase()) &&
-            !(user?.interests || []).includes(option)
-        );
-    }, [searchTerm, user?.interests]);
 
     const handleUpdateProfile = async (updates: Partial<UserData>, silent = false) => {
         if (!user) return;
@@ -158,16 +187,6 @@ const Profile: React.FC = () => {
         }
     };
 
-    const addInterest = (interest: string) => {
-        const currentInterests = user?.interests || [];
-        if (currentInterests.length >= 5) {
-            toast.warning("Limite de 5 interesses atingido.");
-            return;
-        }
-        handleUpdateProfile({ interests: [...currentInterests, interest] }, true);
-        setSearchTerm("");
-    };
-
     const removeInterest = (interest: string) => {
         if (!user) return;
         handleUpdateProfile({ interests: user.interests.filter(i => i !== interest) }, true);
@@ -190,14 +209,16 @@ const Profile: React.FC = () => {
     return (
         <div className="Profile flex flex-col min-h-screen bg-gray-50 relative pt-20">
             
-            {/** --- HEADER FIXO ACADEME --- **/}
-            <header className="fixed top-0 left-0 w-full bg-white/95 backdrop-blur-md shadow-md z-[1000] py-3  border-b border-gray-100">            
-                <div className="w-full flex items-center justify-between px-6 md:px-12">
+            {/** --- HEADER FIXO ACADEME - DESIGN ORIGINAL --- **/}
+            <header className="fixed top-0 left-0 w-full bg-white/95 backdrop-blur-md shadow-md z-[1000] py-3 border-b border-gray-100 h-20 flex items-center">
+                {/** w-full e paddings responsivos para fluidez ponta a ponta sem mover itens interno **/}
+                <div className="w-full flex items-center justify-between px-6 md:px-12 lg:px-20">
                     
                     <div className="flex-shrink-0">
                         <img src={coloredLogo} alt="logo" className="h-10 cursor-pointer" onClick={() => navigate('/')} />
                     </div>
                     
+                    {/** max-w-2xl mantido para barra de pesquisa não esticar feio **/}
                     <div className="flex-1 max-w-2xl mx-8 relative">
                         <TextBar 
                             variant="default" 
@@ -213,11 +234,10 @@ const Profile: React.FC = () => {
                         />
 
                         {searchTerm && isDropdownVisible && !isEditingInterests && (
-                            <div className="absolute top-full left-0 w-full bg-white shadow-2xl rounded-b-xl mt-1 border border-gray-100 overflow-hidden text-left">
+                            <div className="absolute top-full left-0 w-full bg-white shadow-2xl rounded-b-xl mt-1 border border-gray-100 overflow-hidden text-left z-[1100]">
                                 {filteredAlunos.length > 0 ? (
                                     filteredAlunos.map(aluno => (
-                                        <div key={aluno._id} onClick={() => navigate(`/student/${aluno._id}`)} className="flex items-center gap-3 p-3 hover:bg-blue-50 cursor-pointer border-b last:border-none">
-                                            {/* Alteração: Avatar na busca de alunos */}
+                                        <div key={aluno._id} onClick={() => navigate(`/student/${aluno._id}`)} className="flex items-center gap-3 p-3 hover:bg-blue-50 cursor-pointer border-b last:border-none transition-colors">
                                             <Avatar name={aluno.name} image={aluno.profileImage} size="sm" className="border" />
                                             <div className="flex flex-col">
                                                 <span className="font-bold text-[#003465] text-xs">{aluno.name}</span>
@@ -241,32 +261,20 @@ const Profile: React.FC = () => {
                                 <span className="text-[9px] font-black text-[#006ACB] uppercase tracking-widest leading-none">Online</span>
                                 <span className="text-[#003465] font-bold text-xs">{user.name.split(' ')[0]}</span>
                             </div>
-                            {/* Alteração: Avatar no Header principal */}
-                            <Avatar 
-                                name={user.name} 
-                                image={user.profileImage} 
-                                size="md" 
-                                className={`border-2 ${isAccountMenuOpen ? 'border-[#006ACB] shadow-lg scale-105' : 'border-gray-200 group-hover:border-[#006ACB]'}`} 
-                            />
+                            <Avatar name={user.name} image={user.profileImage} size="md" className={`border-2 transition-all ${isAccountMenuOpen ? 'border-[#006ACB] scale-105' : 'border-gray-200 group-hover:border-[#006ACB]'}`} />
                         </div>
-
                         {isAccountMenuOpen && (
                             <div className="absolute right-0 mt-4 w-72 bg-white rounded-[24px] shadow-[0_20px_50px_rgba(0,52,101,0.15)] border border-gray-100 py-6 z-[1100] animate-in fade-in slide-in-from-top-3 duration-200">
                                 <div className="px-8 pb-4 border-b border-gray-50 flex flex-col items-center text-center">
                                     <p className="text-[#006ACB] text-[10px] font-black uppercase tracking-[0.2em] mb-4">Conta AcadeMe</p>
-                                    {/* Alteração: Avatar no Menu Dropdown */}
                                     <Avatar name={user.name} image={user.profileImage} size="lg" className="border-4 border-blue-50 p-0.5 mb-3" />
                                     <p className="text-[#003465] font-black text-lg tracking-tighter leading-tight truncate w-full">{user.name}</p>
                                     <p className="text-gray-400 text-xs truncate w-full">{user.email}</p>
                                 </div>
                                 <div className="pt-4 px-2 text-left">
-                                    <button onClick={() => { setIsAccountMenuOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="w-full flex items-center gap-4 px-6 py-3 text-sm font-bold text-gray-600 hover:bg-blue-50 hover:text-[#006ACB] rounded-xl transition-all group">
-                                        Meu Perfil
-                                    </button>
+                                    <button onClick={() => { setIsAccountMenuOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="w-full flex items-center gap-4 px-6 py-3 text-sm font-bold text-gray-600 hover:bg-blue-50 hover:text-[#006ACB] rounded-xl transition-all">Meu Perfil</button>
                                     <div className="my-2 border-t border-gray-50 mx-4" />
-                                    <button onClick={handleLogout} className="w-full flex items-center gap-4 px-6 py-3 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all group">
-                                        Sair da conta
-                                    </button>
+                                    <button onClick={handleLogout} className="w-full flex items-center gap-4 px-6 py-3 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all">Sair da conta</button>
                                 </div>
                             </div>
                         )}
@@ -274,161 +282,152 @@ const Profile: React.FC = () => {
                 </div>
             </header>
 
-            {/* MODAL DE EXCLUSÃO */}
+            {/** --- MODAL DELETAR - DESIGN ORIGINAL --- **/}
             {showDeleteModal && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                    <div className="bg-white rounded-3xl p-10 max-w-sm w-[90%] shadow-2xl flex flex-col items-center text-center">
-                        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6">
-                            <Icon iconCenter="trash" className="w-8 h-8" />
-                        </div>
+                    <div className="bg-white rounded-3xl p-10 max-w-sm w-[90%] shadow-2xl flex flex-col items-center text-center border border-gray-100">
+                        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6"><Icon iconCenter="trash" className="w-8 h-8" /></div>
                         <h3 className="text-2xl font-black text-[#003465] uppercase tracking-tighter">Excluir Projeto?</h3>
-                        <p className="text-gray-500 text-sm my-4">Esta ação não pode ser desfeita.</p>
+                        <p className="text-gray-500 text-sm my-4 font-medium">Esta ação não pode ser desfeita e removerá o trabalho do seu portfólio.</p>
                         <div className="flex flex-col w-full gap-3 mt-4">
-                            <Button onClick={confirmDelete} disabled={isDeleting} className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-full">
-                                {isDeleting ? "Excluindo..." : "Sim, Excluir"}
-                            </Button>
-                            <button onClick={() => setShowDeleteModal(false)} className="text-gray-400 font-bold py-2 text-xs uppercase">Cancelar</button>
+                            <Button onClick={confirmDelete} disabled={isDeleting} className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-full shadow-lg shadow-red-100">{isDeleting ? "Excluindo..." : "Sim, Excluir"}</Button>
+                            <button onClick={() => setShowDeleteModal(false)} className="text-gray-400 font-bold py-2 text-xs uppercase tracking-widest hover:text-gray-600 transition-colors">Cancelar</button>
                         </div>
                     </div>
                 </div>
             )}
             
             <div className="profile-section flex flex-col md:flex-row flex-grow">
-                {/* Sidebar */}
-                <div className="profile-sidebar hidden md:flex flex-col bg-gradient-to-b from-[#003465] to-[#006ACB] w-full min-w-80 md:w-[350px] shrink-0 p-8 text-white shadow-2xl">
+                {/** --- SIDEBAR - DESIGN E LARGURA ORIGINAIS PRESERVADOS --- **/}
+                <div className="profile-sidebar hidden md:flex flex-col bg-gradient-to-b from-[#003465] to-[#006ACB] w-full min-w-80 md:w-[350px] shrink-0 p-8 text-white shadow-2xl z-20">
                     <div className="profile-header flex flex-col items-center">
                         <input type="file" ref={fileInputRef} onChange={handleImageChange} className="hidden" accept="image/*" />
-                        <div className="relative group">
-                            {/* Alteração: Avatar na Sidebar (Foto Principal) */}
-                            <Avatar 
-                                name={user.name} 
-                                image={user.profileImage} 
-                                size="xl" 
-                                className="border-4 border-white/30 p-1 mt-6 cursor-pointer hover:scale-105 shadow-xl"
-                                onClick={() => fileInputRef.current?.click()} 
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none mt-6">
-                                <span className="bg-black/50 text-white text-[8px] px-2 py-1 rounded-full uppercase font-bold">Trocar Foto</span>
+                        <div className="relative group mt-6">
+                            <Avatar name={user.name} image={user.profileImage} size="xl" className="border-4 border-white/20 p-1 cursor-pointer hover:scale-105 transition-transform shadow-2xl" onClick={() => fileInputRef.current?.click()} />
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                <span className="bg-black/40 backdrop-blur-sm text-white text-[9px] px-3 py-1.5 rounded-full uppercase font-black">Trocar Foto</span>
                             </div>
                         </div>
                         <h1 className="profile-name font-black mt-6 text-center text-2xl tracking-tighter leading-tight">{user.name}</h1>
                         <p className="text-blue-100/70 text-center text-sm mb-6 font-medium">{user.email}</p>
-                        
                         <div className="w-full border-b border-white/10 my-4" />
-                        
                         <div className="w-full mb-6 text-left">
                             <label className="text-blue-200 text-[10px] font-black uppercase tracking-widest">Curso</label>
                             <p className="text-white mt-2 font-bold text-sm leading-snug">{user.course}</p>
                         </div>
-
                         <div className="w-full border-b border-white/10 my-4" />
-
                         <div className="w-full group text-left">
                             <div className="flex justify-between items-center mb-2">
                                 <label className="text-blue-200 text-[10px] font-black uppercase tracking-widest">Biografia</label>
                                 {!isEditingBio ? (
                                     <button onClick={() => setIsEditingBio(true)} className="opacity-0 group-hover:opacity-100 transition text-[10px] font-bold underline text-blue-200 hover:text-white">Editar</button>
                                 ) : (
-                                    <button onClick={async () => { await handleUpdateProfile({ bio: tempBio }); setIsEditingBio(false); }} className="text-[10px] font-bold text-green-300">Salvar</button>
+                                    <button onClick={async () => { await handleUpdateProfile({ bio: tempBio }); setIsEditingBio(false); }} className="text-[10px] font-bold text-green-300 hover:text-green-200">Salvar</button>
                                 )}
                             </div>
                             {isEditingBio ? (
                                 <textarea className="w-full bg-white/10 border border-white/20 rounded-xl p-3 text-xs text-white focus:outline-none h-24 italic resize-none" value={tempBio} onChange={(e) => setTempBio(e.target.value)} />
                             ) : (
-                                <p className="text-white text-sm italic leading-relaxed opacity-90">{user.bio || "Escreva uma breve biografia..."}</p>
+                                <p className="text-white text-sm italic leading-relaxed opacity-90 leading-relaxed">{user.bio || "Escreva uma breve biografia para que outros alunos conheçam seu trabalho..."}</p>
                             )}
                         </div>
-
                         <div className="w-full border-b border-white/10 my-6" />
-
                         <div className="interest-area w-full text-left">
                             <div className="flex justify-between items-center mb-4">
                                 <h2 className="font-black text-white text-[11px] uppercase tracking-widest">Interesses</h2>
-                                <button 
-                                    onClick={() => { 
-                                        setIsEditingInterests(!isEditingInterests); 
-                                        setSearchTerm(""); 
-                                    }} 
-                                    className="text-[10px] font-bold underline text-blue-200 hover:text-white"
-                                >
-                                    {isEditingInterests ? "Pronto" : "Gerenciar"}
-                                </button>
+                                <button onClick={() => { setIsEditingInterests(!isEditingInterests); setSearchTerm(""); }} className="text-[10px] font-bold underline text-blue-200 hover:text-white">{isEditingInterests ? "Pronto" : "Gerenciar"}</button>
                             </div>
-
-                            {isEditingInterests && (
-                                <div className="relative mb-4 animate-in fade-in slide-in-from-top-1">
-                                    <input 
-                                        type="text"
-                                        placeholder="Procurar interesse..."
-                                        className="w-full bg-white/10 border border-white/20 rounded-xl p-2.5 text-xs text-white placeholder:text-blue-200/50 focus:outline-none focus:border-white/50 transition-all"
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        autoFocus
-                                    />
-                                    
-                                    {searchTerm && filteredOptions.length > 0 && (
-                                        <div className="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-2xl overflow-hidden border border-gray-100">
-                                            {filteredOptions.slice(0, 6).map(option => (
-                                                <div 
-                                                    key={option}
-                                                    onClick={() => addInterest(option)}
-                                                    className="px-4 py-2.5 text-[11px] font-black text-[#003465] hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-none uppercase flex justify-between items-center group"
-                                                >
-                                                    {option}
-                                                    <span className="text-blue-400 opacity-0 group-hover:opacity-100">+</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
                             <div className="flex flex-wrap gap-2 mb-6">
                                 {user.interests.map((interest, i) => (
-                                    <div 
-                                        key={i} 
-                                        className={`flex items-center gap-2 text-[10px] px-3 py-1.5 rounded-full uppercase font-bold border transition-all ${
-                                            isEditingInterests 
-                                            ? "bg-white text-[#003465] border-white animate-pulse shadow-md" 
-                                            : "bg-white/20 text-white border-white/10"
-                                        }`}
-                                    >
+                                    <div key={i} className={`flex items-center gap-2 text-[10px] px-3 py-1.5 rounded-full uppercase font-bold border transition-all ${isEditingInterests ? "bg-white text-[#003465] border-white animate-pulse shadow-xl scale-105" : "bg-white/10 text-white border-white/10"}`}>
                                         {interest}
-                                        {isEditingInterests && (
-                                            <button 
-                                                onClick={() => removeInterest(interest)} 
-                                                className="hover:text-red-500 transition-colors bg-gray-100 rounded-full w-4 h-4 flex items-center justify-center text-[8px]"
-                                            >
-                                                ✕
-                                            </button>
-                                        )}
+                                        {isEditingInterests && <button onClick={() => removeInterest(interest)} className="hover:text-red-500 transition-colors bg-gray-100 rounded-full w-4 h-4 flex items-center justify-center text-[8px] text-[#003465]">✕</button>}
                                     </div>
                                 ))}
-                                {user.interests.length === 0 && !isEditingInterests && (
-                                    <p className="text-blue-200/40 text-[10px] italic">Nenhum interesse selecionado.</p>
-                                )}
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="projects-section flex flex-col h-auto w-full bg-gray-50 p-6 md:p-12 overflow-y-auto">
+                {/** --- SEÇÃO PROJETOS - DESIGN ORIGINAL PRESERVADO --- **/}
+                {/** h-auto, max-w-none e paddings responsivos para fluidez ponta a ponta sem desalinhamento **/}
+                <div className="projects-section flex flex-col h-auto w-full bg-[#F8FAFC] p-8 md:p-12 lg:p-16 overflow-y-auto">
+                    
+                    {/** --- ÁREA DE FILTROS E AÇÕES - DESIGN ORIGINAL --- **/}
                     <div className="projects-filters flex flex-col lg:flex-row items-center justify-between w-full mb-10 gap-6">
-                        <div className="w-full lg:w-[400px]">                                                
+                        {/** max-w-2xl mantido para barra de pesquisa não esticar feio **/}
+                        <div className="flex-1 max-w-2xl w-full">
                             <TextBar 
                                 type='search' 
                                 placeholder='O que você quer encontrar no seu portfólio?'                                 
-                                className="bg-white shadow-sm text-gray-800 font-medium rounded-full"
+                                className="bg-white shadow-sm text-gray-800 font-medium rounded-2xl h-14"
                                 value={projectSearchTerm}
                                 onChange={(e: any) => setProjectSearchTerm(e.target.value || "")}
                             />
                         </div>
-                        <Button shape="pill" className="p-4 px-8 w-full lg:w-auto justify-center shadow-lg hover:bg-black transition-all uppercase tracking-widest font-black text-xs" iconRight='add' onClick={() => navigate('/upload')}>
-                            Novo Trabalho
-                        </Button>
+
+                        {/** GRUPO DE AÇÕES (CARTA + BOTÃO) - DESIGN ORIGINAL --- **/}
+                        <div className="flex items-center gap-4 w-full lg:w-auto justify-center lg:justify-end">
+                            
+                            {/** MENU DE CONVITES - DESIGN ORIGINAL **/}
+                            <div className="relative" ref={inviteMenuRef}>
+                                <button 
+                                    onClick={() => setIsInviteMenuOpen(!isInviteMenuOpen)}
+                                    className={`relative p-3 rounded-full transition-all flex items-center justify-center ${isInviteMenuOpen ? 'bg-blue-100 text-blue-600 shadow-inner' : 'bg-white text-gray-400 hover:bg-gray-100 shadow-sm border border-gray-100'}`}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+                                    </svg>
+                                    
+                                    {invites.length > 0 && (
+                                        <span className="absolute top-0 right-0 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white animate-bounce">
+                                            {invites.length}
+                                        </span>
+                                    )}
+                                </button>
+
+                                {isInviteMenuOpen && (
+                                    <div className="absolute top-full right-0 mt-3 w-80 bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-gray-100 overflow-hidden z-[1001] animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <div className="p-4 border-b border-gray-50 bg-gray-50/50 text-left">
+                                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Convites de Projeto</h3>
+                                        </div>
+                                        <div className="max-h-72 overflow-y-auto text-left">
+                                            {invites.length > 0 ? (
+                                                invites.map(invite => {
+                                                    const sender = invite.students?.find((s: any) => s.status === 'accepted')?.student;
+                                                    return (
+                                                        <div key={invite._id} className="p-4 border-b border-gray-50 last:border-none flex flex-col gap-3">
+                                                            <div className="flex items-center gap-3">
+                                                                <Avatar name={sender?.name || "A"} image={sender?.profileImage} size="sm" />
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-xs font-bold text-[#003465]">{invite.title}</span>
+                                                                    <span className="text-[10px] text-gray-400 font-medium">Convidado por {sender?.name.split(' ')[0]}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex gap-2">
+                                                                <button onClick={() => handleRespondInvite(invite._id, 'accepted')} className="flex-1 bg-blue-600 text-white py-1.5 rounded-lg text-[10px] font-bold uppercase hover:bg-blue-700 transition">Aceitar</button>
+                                                                <button onClick={() => handleRespondInvite(invite._id, 'declined')} className="px-3 bg-red-100 text-red-500 py-1.5 rounded-lg text-[10px] font-bold uppercase hover:bg-red-200 transition">×</button>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })
+                                            ) : (
+                                                <div className="p-8 text-center text-gray-400 text-xs italic font-medium">Nenhuma nova notificação</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <Button shape="pill" className="p-4 px-8 w-full lg:w-auto justify-center shadow-lg hover:bg-black transition-all uppercase tracking-[0.2em] font-black text-xs h-14" iconRight='add' onClick={() => navigate('/upload')}>
+                                Novo Trabalho
+                            </Button>
+                        </div>
                     </div>
 
-                    <div className="projects-list w-full space-y-8 pb-10">
+                    {/** --- LISTA DE PROJETOS - DESIGN ORIGINAL --- **/}
+                    {/** max-w-none para usar a tela cheia, space-y-8 preservado **/}
+                    <div className="projects-list w-full max-w-none mx-auto space-y-8 pb-20">
                         {filteredProjects.length > 0 ? (
                             filteredProjects.map((proj) => (
                                 <ProjectCard
@@ -445,10 +444,12 @@ const Profile: React.FC = () => {
                                 />
                             ))
                         ) : (
-                            <div className="flex flex-col items-center justify-center py-32 opacity-30 border-2 border-dashed border-gray-300 rounded-[32px] bg-white/50 text-center">
-                                <Icon iconCenter="add" className="w-16 h-16 mb-4 text-gray-400" />
+                            <div className="flex flex-col items-center justify-center py-32 opacity-30 border-2 border-dashed border-gray-300 rounded-[32px] bg-white/50 text-center hover:border-blue-200 transition-colors">
+                                <div className="p-6 bg-white rounded-full shadow-sm mb-6">
+                                    <Icon iconCenter="add" className="w-16 h-16 mb-4 text-gray-400" />
+                                </div>
                                 <p className="italic font-bold text-[#003465] text-lg uppercase tracking-tighter">
-                                    {projectSearchTerm ? "Sem resultados para a busca." : "Nenhum projeto publicado."}
+                                    {projectSearchTerm ? "Sem resultados para a busca." : "Nenhum projeto publicado ainda."}
                                 </p>
                             </div>
                         )}

@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { Button } from '../components/Button';
 import { TextBar } from '../components/TextBar';
-import logo from '../assets/colored-logo.svg';
+import logo from '../assets/white-logo.svg'; // Logo branca para o banner
+import coloredLogo from '../assets/colored-logo.svg'; // Logo colorida para o formulário
 import moldure from '../assets/squares-moldure.svg';
 import './Login.css';
 import { useNavigate, Link } from 'react-router-dom';
@@ -12,22 +13,18 @@ import { toast } from 'react-toastify';
 const Login: React.FC = () => {
     const navigate = useNavigate();
     
-    // Estados para capturar os inputs do usuário
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault(); 
-        
-        // Pequena validação de frontend antes de chamar a API
         if (!email || !password) {
             toast.warn('Preencha todos os campos para entrar.');
             return;
         }
 
         setLoading(true);
-
         const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
         try {
@@ -40,42 +37,53 @@ const Login: React.FC = () => {
             const data = await response.json();
 
             if (response.ok) {
-                // ✅ SUCESSO
                 localStorage.setItem('@AcadeMe:user', JSON.stringify(data.user));
-                
                 toast.success(`🚀 Bem-vindo de volta, ${data.user.name.split(' ')[0]}!`);
                 navigate('/profile'); 
             } else {
-                // ❌ CREDENCIAIS INCORRETAS
                 toast.error(data.error || 'E-mail ou senha incorretos.');
             }
         } catch (error) {
-            // ⚠️ ERRO DE CONEXÃO
-            console.error('Erro na conexão com a API:', error);
-            toast.error('O servidor parece estar offline. Tente novamente em instantes.');
+            toast.error('O servidor parece estar offline.');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="Login flex items-center justify-center h-screen w-screen px-6 sm:px-8 md:px-16 relative overflow-hidden bg-gray-50">
-            <div className="Login-content flex flex-col items-center justify-center w-full max-w-md relative z-10">
+        <div className="Login w-screen min-h-screen flex items-center justify-center bg-white relative overflow-hidden">
+            
+            {/** * BANNER LATERAL (MESMO PADRÃO DO SIGNUP)
+             * absolute para não interferir na centralização do formulário
+             **/}
+            <div className="banner hidden 2xl:flex absolute left-0 top-0 bg-gradient-to-br from-[#006ACB] to-[#003465] p-16 flex-col justify-center items-center w-[400px] h-screen z-20">
+                <Link to="/">
+                    <img src={logo} alt="logo" className="w-48 mb-8" />
+                </Link>
+                <p className="text-[#F0F2F5] text-[24px] leading-relaxed text-center font-medium">
+                    Acesse sua conta e continue sua jornada
+                </p>
+            </div>
+
+            {/** * CONTAINER DO LOGIN (CENTRO REAL)
+             * z-10 para ficar acima de possíveis decorações de fundo
+             **/}
+            <div className="Login-content flex flex-col items-center justify-center w-full max-w-[480px] px-8 z-10 2xl:ml-[200px]">
                 
-                {/** Logo com link para a Home **/}
-                <Link to="/" className='mb-8'>
+                {/** Logo Colorida sempre presente no Login para dar respiro ao card **/}
+                <Link to="/" className='mb-10'>
                     <img 
-                        src={logo} 
+                        src={coloredLogo} 
                         alt="logo" 
-                        className="logo mt-16 sm:mt-12 md:mt-16 hover:scale-105 transition-transform" 
-                        style={{ width: '150px', height: 'auto' }} 
+                        className="hover:scale-105 transition-transform w-[180px] h-auto" 
                     />
                 </Link>
 
-                {/** Formulário de Login **/}
-                <div className="Login-form w-full flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 gap-4 bg-white shadow-xl rounded-3xl border border-gray-100">
-                    <form onSubmit={handleSubmit} className="w-full flex flex-col items-center justify-center gap-4">
-                        
+                {/** Card do Formulário **/}
+                <div className="Login-form w-full flex flex-col items-center justify-center p-8 sm:p-10 gap-6 bg-white shadow-[0_20px_60px_rgba(0,52,101,0.12)] rounded-[32px] border border-gray-50">
+                    <h1 className="text-[#006ACB] text-2xl font-black uppercase tracking-tighter mb-2">Login</h1>
+                    
+                    <form onSubmit={handleSubmit} className="w-full flex flex-col gap-5">
                         <TextBar 
                             label="E-mail Acadêmico" 
                             type='email' 
@@ -83,6 +91,7 @@ const Login: React.FC = () => {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             name="email"
+                            required
                         />
                         
                         <div className="w-full flex flex-col">
@@ -93,40 +102,39 @@ const Login: React.FC = () => {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 name="password"
+                                required
                             />
-                            <a href="#" className='text-[#006ACB] text-[10px] font-bold uppercase tracking-widest mt-2 self-end hover:underline opacity-70'>
+                            <a href="#" className='text-[#006ACB] text-[10px] font-bold uppercase tracking-widest mt-3 self-end hover:underline opacity-70'>
                                 Esqueci minha senha
                             </a>
                         </div>
 
                         <Button 
                             type="submit"
-                            size="default" 
-                            shape="pill" 
-                            className="p-4 mt-4 mb-4 w-full justify-center font-black uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-all" 
+                            className="p-4 mt-4 w-full justify-center font-black uppercase tracking-widest text-xs shadow-xl shadow-blue-100 active:scale-95 transition-all" 
                             disabled={loading}
                         >
-                            {loading ? 'Validando Acesso...' : 'Entrar na conta'}
+                            {loading ? 'Validando...' : 'Entrar na conta'}
                         </Button>
                         
-                        <div className="flex items-center gap-2 w-full opacity-30">
+                        <div className="flex items-center gap-3 w-full my-2 opacity-20">
                             <hr className="flex-1 border-t border-[#003465]" />
                             <span className="text-[#003465] text-[10px] font-black uppercase">ou</span>
                             <hr className="flex-1 border-t border-[#003465]" />
                         </div>
 
-                        <Link to="/signup" className='text-[#006ACB] text-xs font-black uppercase tracking-widest mt-2 hover:scale-105 transition-transform'>
+                        <Link to="/signup" className='text-[#006ACB] text-xs font-black uppercase tracking-widest text-center hover:scale-105 transition-transform'>
                             Criar nova conta
                         </Link>
                     </form>
                 </div>
             </div>
 
-            {/** Moldura **/}
+            {/** Moldura decorativa no fundo **/}
             <img 
                 src={moldure} 
                 alt="Moldura" 
-                className="absolute bottom-0 right-0 w-[250px] sm:w-[350px] md:w-[450px] lg:w-[562px] h-auto z-0 pointer-events-none opacity-10" 
+                className="hidden md:block absolute bottom-0 right-0 w-[500px] h-auto z-0 pointer-events-none opacity-10" 
             />
         </div>
     );
