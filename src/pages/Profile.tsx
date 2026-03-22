@@ -18,6 +18,7 @@ interface UserData {
     bio: string;
     interests: string[];
     profileImage?: string; 
+    role?: string;
 }
 
 const INTEREST_OPTIONS = [
@@ -272,7 +273,12 @@ const Profile: React.FC = () => {
                                     <p className="text-gray-400 text-xs truncate w-full">{user.email}</p>
                                 </div>
                                 <div className="pt-4 px-2 text-left">
-                                    <button onClick={() => { setIsAccountMenuOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="w-full flex items-center gap-4 px-6 py-3 text-sm font-bold text-gray-600 hover:bg-blue-50 hover:text-[#006ACB] rounded-xl transition-all">Meu Perfil</button>
+                                    <button 
+                                    onClick={() => navigate(user?.role === 'professor' ? '/professor-profile' : '/Profile')} 
+                                    className="w-full flex items-center gap-4 px-6 py-3 text-sm font-bold text-gray-600 hover:bg-blue-50 hover:text-[#006ACB] rounded-xl transition-all group"
+                                >
+                                    Meu Perfil
+                                </button>
                                     <div className="my-2 border-t border-gray-50 mx-4" />
                                     <button onClick={handleLogout} className="w-full flex items-center gap-4 px-6 py-3 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all">Sair da conta</button>
                                 </div>

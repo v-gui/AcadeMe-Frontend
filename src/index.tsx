@@ -5,10 +5,12 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify'; 
 import 'react-toastify/dist/ReactToastify.css'; 
 import './index.css';
+
 import Home from './pages/Home';
 import SignUp from './pages/SignUp';
 import Login from './pages/Login';
 import Profile from './pages/Profile';
+import ProfileProf from './pages/ProfileProf';
 import Upload from './pages/Upload';
 import ProjectView from './pages/ProjectView'; 
 import StudentProfileView from './pages/StudentProfileView';
@@ -29,16 +31,17 @@ root.render(
         theme="colored"
       />
       
-      {/* O MainLayout envolve todas as rotas para garantir o alinhamento global */}
       <MainLayout>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />        
           <Route path="/signup" element={<SignUp />} />
+          
           <Route path="/profile" element={<Profile />} />
+          <Route path="/professor-profile" element={<ProfileProf />} /> 
+          
           <Route path="/upload" element={<Upload />} />
           
-          {/* Rotas de Visualizações */}
           <Route path="/project/:id" element={<ProjectView />} />
           <Route path="/student/:id" element={<StudentProfileView />} />
         </Routes>
