@@ -15,6 +15,8 @@ interface Aluno {
     name: string;
     course: string;
     profileImage?: string; 
+    role?: string;
+
 }
 
 interface CollaboratorWithStatus {
@@ -275,7 +277,10 @@ const Upload: React.FC = () => {
                         <p className="text-gray-400 text-xs truncate w-full">{currentUser?.email}</p>
                     </div>
                     <div className="pt-4 px-2">
-                        <button onClick={() => navigate('/Profile')} className="w-full flex items-center gap-4 px-6 py-3 text-sm font-bold text-gray-600 hover:bg-blue-50 hover:text-[#006ACB] rounded-xl transition-all group">
+                        <button 
+                            onClick={() => navigate(currentUser?.role === 'professor' ? '/professor-profile' : '/profile')} 
+                            className="w-full flex items-center gap-4 px-6 py-3 text-sm font-bold text-gray-600 hover:bg-blue-50 hover:text-[#006ACB] rounded-xl transition-all group"
+                        >
                             Meu Perfil
                         </button>
                         <div className="my-2 border-t border-gray-50 mx-4" />

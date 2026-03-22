@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import { Button } from '../components/Button';
 import { TextBar } from '../components/TextBar';
-import logo from '../assets/white-logo.svg'; // Logo branca para o banner
-import coloredLogo from '../assets/colored-logo.svg'; // Logo colorida para o formulário
+import logo from '../assets/white-logo.svg'; 
+import coloredLogo from '../assets/colored-logo.svg'; 
 import moldure from '../assets/squares-moldure.svg';
 import './Login.css';
 import { useNavigate, Link } from 'react-router-dom';
@@ -28,7 +28,8 @@ const Login: React.FC = () => {
         const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
         try {
-            const response = await fetch(`${apiUrl}/students/login`, {
+            // Usa a nova rota universal de login no Backend
+            const response = await fetch(`${apiUrl}/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
@@ -38,8 +39,16 @@ const Login: React.FC = () => {
 
             if (response.ok) {
                 localStorage.setItem('@AcadeMe:user', JSON.stringify(data.user));
-                toast.success(`🚀 Bem-vindo de volta, ${data.user.name.split(' ')[0]}!`);
-                navigate('/profile'); 
+                
+                // Roteamento inteligente baseado na "role" do usuário
+                if (data.user.role === 'professor') {
+                    toast.success(`Bem-vindo(a), Prof. ${data.user.name.split(' ')[0]}!`);
+                    navigate('/professor-profile'); 
+                } else {
+                    toast.success(`Bem-vindo de volta, ${data.user.name.split(' ')[0]}!`);
+                    navigate('/profile'); 
+                }
+
             } else {
                 toast.error(data.error || 'E-mail ou senha incorretos.');
             }
@@ -53,9 +62,6 @@ const Login: React.FC = () => {
     return (
         <div className="Login w-screen min-h-screen flex items-center justify-center bg-white relative overflow-hidden">
             
-            {/** * BANNER LATERAL (MESMO PADRÃO DO SIGNUP)
-             * absolute para não interferir na centralização do formulário
-             **/}
             <div className="banner hidden 2xl:flex absolute left-0 top-0 bg-gradient-to-br from-[#006ACB] to-[#003465] p-16 flex-col justify-center items-center w-[400px] h-screen z-20">
                 <Link to="/">
                     <img src={logo} alt="logo" className="w-48 mb-8" />
@@ -65,27 +71,18 @@ const Login: React.FC = () => {
                 </p>
             </div>
 
-            {/** * CONTAINER DO LOGIN (CENTRO REAL)
-             * z-10 para ficar acima de possíveis decorações de fundo
-             **/}
             <div className="Login-content flex flex-col items-center justify-center w-full max-w-[480px] px-8 z-10 2xl:ml-[200px]">
                 
-                {/** Logo Colorida sempre presente no Login para dar respiro ao card **/}
                 <Link to="/" className='mb-10'>
-                    <img 
-                        src={coloredLogo} 
-                        alt="logo" 
-                        className="hover:scale-105 transition-transform w-[180px] h-auto" 
-                    />
+                    <img src={coloredLogo} alt="logo" className="hover:scale-105 transition-transform w-[180px] h-auto" />
                 </Link>
 
-                {/** Card do Formulário **/}
                 <div className="Login-form w-full flex flex-col items-center justify-center p-8 sm:p-10 gap-6 bg-white shadow-[0_20px_60px_rgba(0,52,101,0.12)] rounded-[32px] border border-gray-50">
                     <h1 className="text-[#006ACB] text-2xl font-black uppercase tracking-tighter mb-2">Login</h1>
                     
                     <form onSubmit={handleSubmit} className="w-full flex flex-col gap-5">
                         <TextBar 
-                            label="E-mail Acadêmico" 
+                            label="E-mail Institucional" 
                             type='email' 
                             placeholder='seu@email.com' 
                             value={email}
@@ -130,12 +127,7 @@ const Login: React.FC = () => {
                 </div>
             </div>
 
-            {/** Moldura decorativa no fundo **/}
-            <img 
-                src={moldure} 
-                alt="Moldura" 
-                className="hidden md:block absolute bottom-0 right-0 w-[500px] h-auto z-0 pointer-events-none opacity-10" 
-            />
+            <img src={moldure} alt="Moldura" className="hidden md:block absolute bottom-0 right-0 w-[500px] h-auto z-0 pointer-events-none opacity-10" />
         </div>
     );
 }

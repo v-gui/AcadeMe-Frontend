@@ -15,6 +15,7 @@ interface Aluno {
     name: string;
     course: string;
     profileImage?: string; 
+    role?: string;
 }
 
 const StudentProfileView: React.FC = () => {
