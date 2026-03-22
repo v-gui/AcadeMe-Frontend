@@ -1,7 +1,7 @@
 /* eslint-disable jsx-a11y/alt-text */
 import React, { useRef, useEffect, useState } from 'react';
 import coloredLogo from '../assets/colored-logo.svg'; 
-import logoBlockchain from '../assets/logoBlockchain.svg'; // <-- IMPORTAÇÃO DO FALLBACK AQUI
+import logoBlockchain from '../assets/logoBlockchain.svg'; 
 import { useNavigate } from 'react-router-dom';
 import { TextBar } from '../components/TextBar';
 import { Icon } from '../components/Icon';
@@ -35,15 +35,12 @@ const ProfileProf: React.FC = () => {
     const [user, setUser] = useState<ProfessorData | null>(null);
     const [endorsedProjects, setEndorsedProjects] = useState<any[]>([]); 
     
-    // Estados de edição do Perfil
     const [isEditingBio, setIsEditingBio] = useState(false);
     const [tempBio, setTempBio] = useState("");
     
-    // Estados da Área de Expertise
     const [isEditingExpertise, setIsEditingExpertise] = useState(false);
     const [expertiseSearch, setExpertiseSearch] = useState("");
 
-    // Estados da Busca Global (Omnibox do Header)
     const [searchTerm, setSearchTerm] = useState(""); 
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
     const [searchResultStudents, setSearchResultStudents] = useState<any[]>([]);
@@ -53,7 +50,6 @@ const ProfileProf: React.FC = () => {
 
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
-    // Fecha menus ao clicar fora
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -64,7 +60,6 @@ const ProfileProf: React.FC = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Carrega dados do Professor logado e seus projetos validados
     useEffect(() => {
         const savedUser = localStorage.getItem('@AcadeMe:user');
         if (!savedUser) {
@@ -79,7 +74,6 @@ const ProfileProf: React.FC = () => {
             return;
         }
 
-        // Buscar dados do professor
         fetch(`${apiUrl}/professors/${parsedUser._id}`)
             .then(res => res.json())
             .then(data => {
@@ -94,7 +88,6 @@ const ProfileProf: React.FC = () => {
             })
             .catch(() => toast.error("Erro ao carregar perfil de docente."));
 
-        // Buscar projetos já validados
         fetch(`${apiUrl}/professors/${parsedUser._id}/projects`)
             .then(res => res.json())
             .then(data => setEndorsedProjects(data))
@@ -102,7 +95,6 @@ const ProfileProf: React.FC = () => {
 
     }, [navigate, apiUrl]);
 
-    // Busca Global Unificada (Debounce)
     useEffect(() => {
         if (!searchTerm.trim()) {
             setSearchResultStudents([]);
@@ -156,7 +148,7 @@ const ProfileProf: React.FC = () => {
         if (user.areasOfExpertise.includes(expertise)) return;
         
         handleUpdateProfile({ areasOfExpertise: [...user.areasOfExpertise, expertise] }, true);
-        setExpertiseSearch("");
+        setExpertiseSearch(""); 
     };
 
     const removeExpertise = (expertise: string) => {
@@ -213,9 +205,11 @@ const ProfileProf: React.FC = () => {
                             <div className="absolute top-full left-0 w-full bg-white shadow-[0_20px_60px_rgba(0,52,101,0.15)] rounded-b-3xl mt-1 border border-gray-100 overflow-hidden text-left z-[1100] max-h-[500px] overflow-y-auto custom-scrollbar">
                                 
                                 {searchResultStudents.length > 0 && (
-                                    <div>
-                                        <div className="bg-gray-50/80 px-5 py-2.5 border-b border-gray-100">
-                                            <span className="text-[9px] font-black text-[#006ACB] uppercase tracking-[0.2em]">🎓 Alunos</span>
+                                    <div>                                        
+                                        <div className="bg-blue-50 px-5 py-3 border-b border-blue-200">
+                                            <span className="text-[10px] font-black text-[#006ACB] uppercase tracking-[0.2em] flex items-center gap-2">
+                                                Alunos
+                                            </span>
                                         </div>
                                         {searchResultStudents.map(aluno => (
                                             <div key={aluno._id} onClick={() => navigate(`/student/${aluno._id}`)} className="flex items-center gap-4 p-4 hover:bg-blue-50/50 cursor-pointer border-b border-gray-50 last:border-none group">
@@ -230,12 +224,14 @@ const ProfileProf: React.FC = () => {
                                 )}
 
                                 {searchResultProjects.length > 0 && (
-                                    <div>
-                                        <div className="bg-gray-50/80 px-5 py-2.5 border-y border-gray-100">
-                                            <span className="text-[9px] font-black text-[#006ACB] uppercase tracking-[0.2em]">🚀 Projetos</span>
+                                    <div>                                        
+                                        <div className="bg-blue-50 px-5 py-3 border-y border-blue-200">
+                                            <span className="text-[10px] font-black text-[#006ACB] uppercase tracking-[0.2em] flex items-center gap-2">
+                                                Projetos
+                                            </span>
                                         </div>
                                         {searchResultProjects.map(proj => (
-                                            <div key={proj._id} onClick={() => navigate(`/project/${proj._id}`)} className="flex items-center gap-4 p-4 hover:bg-blue-50/50 cursor-pointer border-b border-gray-50 last:border-none group">
+                                            <div key={proj._id} onClick={() => navigate(`/project/${proj._id}`)} className="flex items-center gap-4 p-4 hover:bg-green-50/50 cursor-pointer border-b border-gray-50 last:border-none group">
                                                 <div className="flex flex-col flex-1 overflow-hidden">
                                                     <span className="font-bold text-[#003465] text-xs group-hover:text-[#006ACB] transition-colors truncate">{proj.title}</span>
                                                     <span className="text-gray-400 text-[9px] uppercase font-black tracking-wider mt-0.5 truncate">
@@ -401,7 +397,7 @@ const ProfileProf: React.FC = () => {
                                     description={proj.description}
                                     tags={proj.tags || ["AcadeMe"]}
                                     date={new Date(proj.createdAt).toLocaleDateString()}
-                                    imageUrl={proj.imageUrl || logoBlockchain} // <-- FALLBACK APLICADO AQUI!
+                                    imageUrl={proj.imageUrl || logoBlockchain} 
                                     onView={(id) => navigate(`/project/${id}`)}
                                 />
                             ))}

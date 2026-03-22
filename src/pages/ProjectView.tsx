@@ -24,11 +24,14 @@ const ProjectView: React.FC = () => {
     
     const [project, setProject] = useState<any>(null);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
-    const [alunos, setAlunos] = useState<Aluno[]>([]);
-    const [searchTerm, setSearchTerm] = useState("");
-    const [isDropdownVisible, setIsDropdownVisible] = useState(false);
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+
+    // --- ESTADOS DA BUSCA GLOBAL (HEADER) ---
+    const [searchTerm, setSearchTerm] = useState("");
+    const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+    const [searchResultStudents, setSearchResultStudents] = useState<any[]>([]);
+    const [searchResultProjects, setSearchResultProjects] = useState<any[]>([]);
 
     // Estados da validação docente
     const [endorseComment, setEndorseComment] = useState("");
@@ -46,6 +49,7 @@ const ProjectView: React.FC = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    // Carregamento do Projeto e Usuário
     useEffect(() => {
         const savedUser = localStorage.getItem('@AcadeMe:user');
         if (savedUser) setCurrentUser(JSON.parse(savedUser));
@@ -54,20 +58,28 @@ const ProjectView: React.FC = () => {
             .then(res => res.json())
             .then(data => setProject(data))
             .catch(err => console.error("Erro ao carregar projeto:", err));
-
-        fetch(`${apiUrl}/students`)
-            .then(res => res.json())
-            .then(data => setAlunos(data))
-            .catch(err => console.error("Erro ao carregar lista de alunos:", err));
     }, [id, apiUrl]);
 
-    const filteredAlunos = useMemo(() => {
-        if (!searchTerm) return [];
-        return alunos.filter(aluno => 
-            aluno.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            aluno.course.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [alunos, searchTerm]);
+    // --- LÓGICA DE BUSCA GLOBAL (HEADER) ---
+    useEffect(() => {
+        if (!searchTerm.trim()) {
+            setSearchResultStudents([]);
+            setSearchResultProjects([]);
+            return;
+        }
+
+        const delayDebounceFn = setTimeout(() => {
+            fetch(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`)
+                .then(res => res.json())
+                .then(data => {
+                    setSearchResultStudents(data.students || []);
+                    setSearchResultProjects(data.projects || []);
+                })
+                .catch(err => console.error("Erro na busca:", err));
+        }, 300);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm, apiUrl]);
 
     const handleLogout = () => {
         localStorage.removeItem('@AcadeMe:user');
@@ -115,7 +127,6 @@ const ProjectView: React.FC = () => {
         }
     };
 
-    // Verifica se o professor logado já validou este projeto
     const hasAlreadyEndorsed = useMemo(() => {
         if (!currentUser || currentUser.role !== 'professor' || !project?.endorsements) return false;
         return project.endorsements.some((end: any) => end.professor?._id === currentUser._id || end.professor === currentUser._id);
@@ -129,52 +140,72 @@ const ProjectView: React.FC = () => {
             {/* --- HEADER FIXO --- */}
             <header className="fixed top-0 left-0 w-full bg-white/95 backdrop-blur-md shadow-md z-[1000] h-20 flex items-center border-b border-gray-100">
                 <div className="w-full flex items-center justify-between px-6 md:px-12 lg:px-20">
-                    <img src={coloredLogo} alt="logo" className="h-10 cursor-pointer" onClick={() => navigate('/')} />
+                    <img src={coloredLogo} alt="logo" className="h-10 cursor-pointer hover:scale-105 transition-transform" onClick={() => navigate('/')} />
                     
                     <div className="flex-1 max-w-2xl mx-8 relative">
                         <TextBar 
                             variant="default" 
-                            placeholder="Pesquisar talentos..." 
+                            placeholder="Pesquisar talentos ou projetos..." 
                             iconLeft="search" 
                             value={searchTerm}
                             onChange={(e: any) => { setSearchTerm(e.target.value); setIsDropdownVisible(true); }}
                             onBlur={() => setTimeout(() => setIsDropdownVisible(false), 200)}
                         />
                         {searchTerm && isDropdownVisible && (
-                            <div className="absolute top-full left-0 w-full bg-white shadow-2xl rounded-b-xl mt-1 border border-gray-100 overflow-hidden z-[1100] text-left">
-                                {filteredAlunos.map(aluno => (
-                                    <div key={aluno._id} onClick={() => navigate(`/student/${aluno._id}`)} className="flex items-center gap-3 p-4 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-none transition-colors">
-                                        <Avatar name={aluno.name} image={aluno.profileImage} size="sm" />
-                                        <div className="flex flex-col">
-                                            <span className="font-bold text-[#003465] text-xs">{aluno.name}</span>
-                                            <span className="text-gray-400 text-[10px] uppercase font-bold">{aluno.course}</span>
+                            <div className="absolute top-full left-0 w-full bg-white shadow-2xl rounded-b-2xl mt-1 border border-gray-100 overflow-hidden z-[1100] text-left max-h-[500px] overflow-y-auto">
+                                
+                                {/** CATEGORIA: ALUNOS **/}
+                                {searchResultStudents.length > 0 && (
+                                    <div>
+                                        <div className="bg-blue-50 px-5 py-3 border-y border-blue-200">
+                                            <span className="text-[10px] font-black text-[#006ACB] uppercase tracking-[0.2em] flex items-center gap-2"> Alunos </span>
                                         </div>
+                                        {searchResultStudents.map(aluno => (
+                                            <div key={aluno._id} onClick={() => navigate(`/student/${aluno._id}`)} className="flex items-center gap-3 p-4 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-none transition-colors">
+                                                <Avatar name={aluno.name} image={aluno.profileImage} size="sm" />
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-[#003465] text-xs">{aluno.name}</span>
+                                                    <span className="text-gray-400 text-[10px] uppercase font-bold">{aluno.course}</span>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
+                                )}
+
+                                {/** CATEGORIA: PROJETOS **/}
+                                {searchResultProjects.length > 0 && (
+                                    <div>
+                                        <div className="bg-blue-50 px-5 py-3 border-y border-blue-200">
+                                            <span className="text-[10px] font-black text-[#006ACB] uppercase tracking-[0.2em] flex items-center gap-2"> Projetos </span>
+                                        </div>
+                                        {searchResultProjects.map(proj => (
+                                            <div key={proj._id} onClick={() => navigate(`/project/${proj._id}`)} className="flex items-center gap-3 p-4 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-none transition-colors">
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-[#003465] text-xs">{proj.title}</span>
+                                                    <span className="text-gray-400 text-[9px] uppercase font-black">Tags: <span className="text-blue-400">{proj.tags?.join(', ')}</span></span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {searchResultStudents.length === 0 && searchResultProjects.length === 0 && (
+                                    <div className="p-10 text-center text-gray-400 text-xs italic">Nenhum resultado encontrado...</div>
+                                )}
                             </div>
                         )}
                     </div>
 
                     <div className="flex-shrink-0 relative" ref={menuRef}>
                         {currentUser ? (
-                            <div 
-                                className="flex items-center gap-3 cursor-pointer group"
-                                onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
-                            >
+                            <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}>
                                 <div className="hidden md:flex flex-col items-end mr-1">
                                     <span className="text-[9px] font-black text-[#006ACB] uppercase tracking-widest leading-none mb-1">
                                         {currentUser?.role === 'professor' ? 'Docente' : 'Online'}
                                     </span>
                                     <span className="text-[#003465] font-bold text-xs">{currentUser?.name?.split(' ')[0] || "User"}</span>
                                 </div>
-                                
-                                <Avatar 
-                                    name={currentUser?.name} 
-                                    image={currentUser?.profileImage} 
-                                    size="md" 
-                                    className={`border-2 transition-all ${isAccountMenuOpen ? 'border-[#006ACB] scale-105 shadow-lg' : 'border-gray-200'}`} 
-                                />
-
+                                <Avatar name={currentUser?.name} image={currentUser?.profileImage} size="md" className={`border-2 transition-all ${isAccountMenuOpen ? 'border-[#006ACB] scale-105 shadow-lg' : 'border-gray-200'}`} />
                                 {isAccountMenuOpen && (
                                     <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-[24px] shadow-[0_20px_50px_rgba(0,52,101,0.15)] border border-gray-100 py-6 z-[1100] animate-in fade-in slide-in-from-top-2 duration-200 text-left">
                                         <div className="px-8 pb-4 border-b border-gray-50 flex flex-col items-center text-center">
@@ -216,7 +247,6 @@ const ProjectView: React.FC = () => {
             <div className="w-full px-6 md:px-12 lg:px-20 mt-6 text-left">
                 <header className="bg-[#003465] text-white p-6 md:p-10 rounded-[40px] shadow-2xl">
                     <div className="grid grid-cols-1 lg:grid-cols-[180px_1fr_240px] gap-8 items-stretch">
-                        
                         {/* COLUNA 1: CAPA + TAGS */}
                         <div className="flex flex-col gap-5">
                             <div className="relative w-full aspect-square">
@@ -224,14 +254,11 @@ const ProjectView: React.FC = () => {
                                     <img src={project.imageUrl || logoPlaceholder} alt="Capa" className="w-full h-full object-contain" />
                                 </div>
                             </div>
-
                             <div className="flex flex-col gap-2">
                                 <label className="text-blue-300/60 text-[12px] font-black uppercase tracking-widest opacity-70">Tecnologias</label>
                                 <div className="flex flex-wrap gap-1.5">
                                     {project.tags?.map((tag: string, i: number) => (
-                                        <span key={i} className="bg-blue-500/20 border border-blue-400/20 text-white text-[8px] px-2.5 py-1 rounded-full font-black uppercase shadow-sm">
-                                            {tag}
-                                        </span>
+                                        <span key={i} className="bg-blue-500/20 border border-blue-400/20 text-white text-[8px] px-2.5 py-1 rounded-full font-black uppercase shadow-sm">{tag}</span>
                                     ))}
                                 </div>
                             </div>
@@ -243,12 +270,9 @@ const ProjectView: React.FC = () => {
                                 <label className="text-blue-300/60 text-[12px] font-black uppercase tracking-[0.2em] block mb-1">Título do Trabalho</label>
                                 <h1 className="text-xl md:text-2xl font-black tracking-tighter text-white uppercase">{project.title}</h1>
                             </div>
-
                             <div className="bg-white/[0.03] border border-white/[0.08] p-4 rounded-[20px] shadow-inner flex-1 flex flex-col">
                                 <label className="text-blue-300/60 text-[12px] font-black uppercase tracking-[0.2em] block mb-1">Sobre o projeto</label>
-                                <p className="text-xs md:text-sm text-blue-50/80 italic leading-relaxed whitespace-pre-wrap min-h-[220px]">
-                                    {project.description}
-                                </p>
+                                <p className="text-xs md:text-sm text-blue-50/80 italic leading-relaxed whitespace-pre-wrap min-h-[220px]">{project.description}</p>
                             </div>
                         </div>
 
@@ -260,31 +284,16 @@ const ProjectView: React.FC = () => {
                                     {project.students?.filter((s: any) => s.status === 'accepted').length} MEMBROS
                                 </span>
                             </div>
-
                             <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[300px] custom-scrollbar pr-1">
-                                {project.students
-                                    ?.filter((item: any) => item.status === 'accepted')
-                                    .map((item: any, i: number) => (
-                                        <div 
-                                            key={i} 
-                                            onClick={() => navigate(`/student/${item.student?._id}`)}
-                                            className="flex items-center gap-2.5 bg-white/[0.04] p-2.5 rounded-lg border border-white/[0.03] hover:bg-white/[0.08] transition-all cursor-pointer group"
-                                        >
-                                            <Avatar name={item.student?.name} image={item.student?.profileImage} size="sm" className="border border-white/10" />
-                                            <div className="flex flex-col flex-1">
-                                                <span className="text-white/90 font-bold text-[12px] group-hover:text-blue-300 transition-colors">
-                                                    {item.student?.name}
-                                                </span>
-                                                <span className="text-green-400 text-[8px] font-black uppercase tracking-widest">
-                                                    Membro
-                                                </span>
-                                            </div>                                            
-                                        </div>
-                                    ))
-                                }
-                                {project.students?.filter((s: any) => s.status === 'accepted').length === 0 && (
-                                    <p className="text-white/20 text-[8px] italic text-center py-10 uppercase font-black">Sem membros.</p>
-                                )}
+                                {project.students?.filter((item: any) => item.status === 'accepted').map((item: any, i: number) => (
+                                    <div key={i} onClick={() => navigate(`/student/${item.student?._id}`)} className="flex items-center gap-2.5 bg-white/[0.04] p-2.5 rounded-lg border border-white/[0.03] hover:bg-white/[0.08] transition-all cursor-pointer group">
+                                        <Avatar name={item.student?.name} image={item.student?.profileImage} size="sm" className="border border-white/10" />
+                                        <div className="flex flex-col flex-1">
+                                            <span className="text-white/90 font-bold text-[12px] group-hover:text-blue-300 transition-colors">{item.student?.name}</span>
+                                            <span className="text-green-400 text-[8px] font-black uppercase tracking-widest">Membro</span>
+                                        </div>                                            
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -294,7 +303,7 @@ const ProjectView: React.FC = () => {
             {/* SEÇÕES INFERIORES */}
             <main className="w-full px-6 md:px-12 lg:px-20 py-10 space-y-12">
                 
-                {/* --- 1. SESSÃO DO PROFESSOR (EMITIR CHANCELAMENTO INICIAL) --- */}
+                {/* --- 1. SESSÃO DO PROFESSOR (VALIDAÇÃO) --- */}
                 {currentUser?.role === 'professor' && !hasAlreadyEndorsed && (
                     <section className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-6 md:p-8 text-left relative overflow-hidden">
                         <div className="absolute left-0 top-0 h-full w-2 bg-green-500" />
@@ -303,15 +312,15 @@ const ProjectView: React.FC = () => {
                                 <h2 className="font-black text-[#003465] uppercase text-xs tracking-[0.2em]">Chancelamento Acadêmico</h2>
                                 <span className="text-[10px] bg-green-50 text-green-600 px-3 py-1 rounded-full font-bold border border-green-100">Ação Formal</span>
                             </div>
-                            <p className="text-xs text-gray-500 leading-relaxed max-w-2xl">Como docente, sua validação atesta a integridade e qualidade deste trabalho. Por favor, insira abaixo um breve parecer que fundamente este chancelamento formal.</p>
+                            <p className="text-xs text-gray-500 leading-relaxed max-w-2xl">Como docente, sua validação atesta a integridade e qualidade deste trabalho.</p>
                             <textarea
                                 className="w-full bg-gray-50 border border-gray-100 rounded-xl p-4 text-xs text-[#003465] focus:outline-none focus:border-green-200 transition-all min-h-[100px] resize-none placeholder:text-gray-400 font-medium"
-                                placeholder="Insira seu parecer acadêmico aqui (obrigatório)..."
+                                placeholder="Insira seu parecer acadêmico aqui..."
                                 value={endorseComment}
                                 onChange={(e) => setEndorseComment(e.target.value)}
                             />
                             <div className="flex justify-end pt-2">
-                                <Button onClick={handleEndorse} disabled={isEndorsing} shape="pill" className="text-white border-none font-black uppercase tracking-widest text-[10px] px-12 py-4 shadow-md transition-all">
+                                <Button onClick={handleEndorse} disabled={isEndorsing} shape="pill" className="text-white font-black uppercase tracking-widest text-[10px] px-12 py-4 shadow-md">
                                     {isEndorsing ? 'Registrando...' : 'Emitir Chancelamento'}
                                 </Button>
                             </div>
@@ -319,15 +328,13 @@ const ProjectView: React.FC = () => {
                     </section>
                 )}
 
-                {/* --- 2. VITRINE DE VALIDAÇÕES (COM EDIÇÃO/EXCLUSÃO) --- */}
+                {/* --- 2. VITRINE DE VALIDAÇÕES --- */}
                 {project.endorsements && project.endorsements.length > 0 && (
                     <section className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-6 md:p-8 text-left relative overflow-hidden">
                         <h2 className="font-black text-[#003465] uppercase text-xs tracking-[0.2em] mb-8 border-l-4 border-green-500 pl-4">Verificações Docentes</h2>
-                        
                         <div className="space-y-5">
                             {project.endorsements.map((end: any, i: number) => {
                                 const isMyEndorsement = currentUser?.role === 'professor' && (end.professor?._id === currentUser._id || end.professor === currentUser._id);
-                                
                                 return (
                                     <div key={i} className={`flex gap-4 p-5 bg-gray-50 rounded-2xl border ${isMyEndorsement ? 'border-green-200' : 'border-gray-100'} items-start`}>
                                         <Avatar name={end.professor?.name || "P"} image={end.professor?.profileImage} size="md" className="shrink-0 border border-gray-200" />
@@ -339,8 +346,6 @@ const ProjectView: React.FC = () => {
                                                 </div>
                                                 <span className="text-[8px] bg-green-100 text-green-700 px-3 py-1 rounded-full font-black uppercase tracking-wider">Trabalho Validado</span>
                                             </div>
-                                            
-                                            {/* SE FOR DO PROFESSOR LOGADO, MOSTRA OPÇÃO DE EDITAR/EXCLUIR */}
                                             {isMyEndorsement ? (
                                                 <div className="flex flex-col gap-3">
                                                     <textarea 
@@ -349,38 +354,24 @@ const ProjectView: React.FC = () => {
                                                         id={`edit-comment-${end.professor?._id}`}
                                                     />
                                                     <div className="flex gap-3 justify-end">
-                                                        <button 
-                                                            onClick={async () => {
-                                                                const newComment = (document.getElementById(`edit-comment-${end.professor?._id}`) as HTMLTextAreaElement).value;
-                                                                try {
-                                                                    const res = await fetch(`${apiUrl}/projects/${project._id}/endorse/${currentUser._id}`, {
-                                                                        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comment: newComment })
-                                                                    });
-                                                                    if(res.ok) {
-                                                                        const data = await res.json(); setProject(data.project); toast.success('Parecer atualizado!');
-                                                                    }
-                                                                } catch(e) { toast.error("Erro ao atualizar."); }
-                                                            }}
-                                                            className="text-[9px] uppercase font-black tracking-widest text-green-600 hover:text-green-700"
-                                                        >
-                                                            Salvar Alteração
-                                                        </button>
+                                                        <button onClick={async () => {
+                                                            const newComment = (document.getElementById(`edit-comment-${end.professor?._id}`) as HTMLTextAreaElement).value;
+                                                            try {
+                                                                const res = await fetch(`${apiUrl}/projects/${project._id}/endorse/${currentUser._id}`, {
+                                                                    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comment: newComment })
+                                                                });
+                                                                if(res.ok) { const data = await res.json(); setProject(data.project); toast.success('Parecer atualizado!'); }
+                                                            } catch(e) { toast.error("Erro ao atualizar."); }
+                                                        }} className="text-[9px] uppercase font-black tracking-widest text-green-600 hover:text-green-700">Salvar</button>
                                                         <span className="text-gray-300">|</span>
-                                                        <button 
-                                                            onClick={async () => {
-                                                                if(window.confirm('Tem certeza que deseja remover seu chancelamento?')) {
-                                                                    try {
-                                                                        const res = await fetch(`${apiUrl}/projects/${project._id}/endorse/${currentUser._id}`, { method: 'DELETE' });
-                                                                        if(res.ok) {
-                                                                            const data = await res.json(); setProject(data.project); toast.info('Chancelamento removido.');
-                                                                        }
-                                                                    } catch(e) { toast.error("Erro ao excluir."); }
-                                                                }
-                                                            }}
-                                                            className="text-[9px] uppercase font-black tracking-widest text-red-400 hover:text-red-500"
-                                                        >
-                                                            Excluir
-                                                        </button>
+                                                        <button onClick={async () => {
+                                                            if(window.confirm('Remover chancelamento?')) {
+                                                                try {
+                                                                    const res = await fetch(`${apiUrl}/projects/${project._id}/endorse/${currentUser._id}`, { method: 'DELETE' });
+                                                                    if(res.ok) { const data = await res.json(); setProject(data.project); toast.info('Removido.'); }
+                                                                } catch(e) { toast.error("Erro ao excluir."); }
+                                                            }
+                                                        }} className="text-[9px] uppercase font-black tracking-widest text-red-400 hover:text-red-500">Excluir</button>
                                                     </div>
                                                 </div>
                                             ) : (
@@ -416,7 +407,7 @@ const ProjectView: React.FC = () => {
                         <h2 className="font-black text-[#003465] uppercase text-xs tracking-[0.2em] mb-6 border-l-4 border-[#006ACB] pl-4">Documentação</h2>
                         <div className="space-y-2.5">
                             {project.files?.map((file: any, i: number) => (
-                                <div key={i} className="flex justify-between items-center p-3.5 bg-gray-50 rounded-2xl hover:bg-blue-50 border border-transparent hover:border-blue-100 transition-all">
+                                <div key={i} className="flex justify-between items-center p-3.5 bg-gray-50 rounded-2xl hover:bg-blue-50 border border-transparent hover:border-blue-100 transition-all group">
                                     <span className="text-blue-900 font-bold text-xs truncate max-w-xs">{file.name}</span>
                                     <Button onClick={() => handleDownload(file.base64, file.name)} size="sm" shape="pill" className="text-[9px] px-5 py-2 uppercase font-black shadow-sm">Baixar</Button>
                                 </div>
@@ -428,8 +419,8 @@ const ProjectView: React.FC = () => {
                         <h2 className="font-black text-[#003465] uppercase text-xs tracking-[0.2em] mb-6 border-l-4 border-[#006ACB] pl-4">Referências</h2>
                         <div className="space-y-2.5">
                             {project.references?.map((ref: string, i: number) => (
-                                <div key={i} className="p-3.5 bg-gray-50 rounded-2xl border-l-4 border-blue-400 hover:bg-blue-50">
-                                    <a href={ref.startsWith('http') ? ref : `https://${ref}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 hover:text-blue-800 underline italic font-bold">{ref}</a>
+                                <div key={i} className="p-3.5 bg-gray-50 rounded-2xl border-l-4 border-blue-400 hover:bg-blue-50 transition-colors">
+                                    <a href={ref.startsWith('http') ? ref : `https://${ref}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 hover:text-blue-800 underline italic break-all font-bold">{ref}</a>
                                 </div>
                             ))}
                         </div>
