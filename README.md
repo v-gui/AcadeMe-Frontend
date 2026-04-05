@@ -1,51 +1,48 @@
-# 🎓 AcadeMe Inc.
+﻿# AcadeMe Frontend
 
-> **Transformando sua trajetória acadêmica em um portfólio de impacto.** O **AcadeMe** é uma plataforma full-stack desenvolvida para estudantes que desejam centralizar, organizar e dar visibilidade aos seus projetos e conquistas universitárias. O objetivo é conectar o potencial acadêmico diretamente com o mercado de trabalho através de uma vitrine profissional e intuitiva.
+Frontend React da plataforma AcadeMe. Esta aplicacao concentra a experiencia de descoberta de projetos, gestao de portfolio academico, convites de equipe e validação docente.
 
----
+## Visao Geral
 
-## 🚀 Funcionalidades
+- `Home`: vitrine publica de alunos e projetos validados.
+- `Profile`: painel do aluno com edicao de perfil, convites e gerenciamento dos projetos.
+- `ProfileProf`: painel do docente com convites de validacao e projetos chancelados.
+- `ProjectView`: visualizacao detalhada do projeto, equipe, anexos e validacoes.
+- `Upload`: criacao e edicao de projetos, equipe, docentes convidados, posters e arquivos.
 
-### 🔐 Autenticação e Segurança
-- **SignUp Inteligente:** Cadastro com validação de senha em tempo real (mínimo de 6 caracteres, letras maiúsculas e números) e mensagens de erro integradas na interface.
-- **Login Fluido:** Acesso persistente via `localStorage` com feedback visual de carregamento nos botões.
-- **Experiência sem Pop-ups:** Substituição de `alerts` nativos por notificações elegantes via **React Toastify**.
-
-### 🔍 Descoberta e Vitrine
-- **Header "Freeze":** Barra de navegação fixa no topo com efeito *glassmorphism* (backdrop-blur).
-- **Busca Estilo LinkedIn:** Barra de pesquisa global com dropdown de resultados instantâneos, permitindo filtrar talentos por nome ou curso.
-- **Showcase de Talentos:** Vitrine pública centralizada exibindo cards de estudantes e seus cursos.
-
-### 📂 Gestão de Portfólio
-- **Dashboard Privado:** Edição de biografia e gerenciamento de áreas de interesse (competências).
-- **CRUD de Projetos:** Criação, visualização, edição e exclusão de trabalhos.
-- **Upload Completo:** Suporte para capas de projeto, galerias de pôsteres, anexos de arquivos e referências bibliográficas.
-- **Draft System:** Persistência automática de rascunhos no navegador para evitar perda de progresso durante o upload.
-
----
-
-## 🛠️ Tecnologias Utilizadas
-
-### Frontend
-- **React.js** (com Hooks e Functional Components)
-- **TypeScript** (Tipagem forte para maior segurança no desenvolvimento)
-- **Tailwind CSS** (Estilização moderna e responsiva)
-- **React Router DOM v6** (Gerenciamento de rotas e navegação)
-- **React Toastify** (Sistema de notificações de UX)
-
-### Backend & Banco de Dados
-- **Node.js** (Ambiente de execução)
-- **Express** (Framework para API REST)
-- **MongoDB** (Banco de dados NoSQL para escalabilidade)
-
----
-
-## 📂 Estrutura do Projeto (Frontend)
+## Estrutura
 
 ```text
 src/
-├── assets/             # Logos, ícones SVG e ilustrações
-├── components/         # Componentes reutilizáveis (Button, TextBar, Navbar, Cards)
-├── pages/              # Páginas principais (Home, Login, SignUp, Profile, Upload)
-├── index.tsx           # Configuração global (ToastContainer e Rotas)
-└── index.css           # Configurações globais do Tailwind e fontes
+|-- assets/         # Logos, imagens e ilustracoes
+|-- components/     # Componentes reutilizaveis de interface
+|-- pages/          # Paginas principais da aplicacao
+|-- types/          # Tipos compartilhados do frontend
+|-- utils/          # Funcoes auxiliares reutilizaveis
+|-- App.tsx         # Rotas principais
+|-- index.tsx       # Bootstrap da aplicacao
+```
+
+## Ponto de Integracao
+
+O frontend usa `REACT_APP_API_URL` para se conectar com a API. Quando a variavel nao esta definida, o fallback local continua sendo:
+
+```env
+http://localhost:3001
+```
+
+## Padroes de Manutencao
+
+- Os modelos compartilhados ficam em `src/types/models.ts`.
+- Regras reutilizadas de projeto ficam em `src/utils/project.ts`.
+- Menus de convites devem reutilizar `src/components/InviteMenu.tsx`.
+- Ao adicionar novas respostas da API, prefira atualizar os tipos compartilhados antes de espalhar `any` pelas paginas.
+
+## Scripts
+
+```bash
+npm start
+npm run build
+npx tsc --noEmit
+```
+

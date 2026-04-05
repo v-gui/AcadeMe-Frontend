@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+﻿/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable jsx-a11y/alt-text */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -9,6 +9,10 @@ import logoPlaceholder from '../assets/white-logo.svg';
 import { TextBar } from '../components/TextBar';
 import { toast } from 'react-toastify';
 import Avatar from '../components/Avatar';
+import ValidatedBadge from '../components/ValidatedBadge';
+import AppHeader from '../components/AppHeader';
+import EmptyState from '../components/EmptyState';
+import { isProjectValidated } from '../utils/project';
 
 interface Aluno {
     _id: string;
@@ -36,6 +40,7 @@ const ProjectView: React.FC = () => {
     // Estados da validação docente
     const [endorseComment, setEndorseComment] = useState("");
     const [isEndorsing, setIsEndorsing] = useState(false);
+    const [isLeavingTeam, setIsLeavingTeam] = useState(false);
 
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
@@ -132,109 +137,101 @@ const ProjectView: React.FC = () => {
         return project.endorsements.some((end: any) => end.professor?._id === currentUser._id || end.professor === currentUser._id);
     }, [currentUser, project]);
 
+    const currentProfessorInvite = useMemo(() => {
+        if (!currentUser || currentUser.role !== 'professor' || !project?.invitedProfessors) return null;
+        return project.invitedProfessors.find(
+            (invite: any) =>
+                invite.professor?._id === currentUser._id || invite.professor === currentUser._id
+        ) || null;
+    }, [currentUser, project]);
+
+    const canCurrentProfessorEndorse = currentProfessorInvite?.status === 'accepted';
+
+    const isCurrentUserAcceptedMember = useMemo(() => {
+        if (!currentUser || currentUser.role !== 'student' || !project?.students) return false;
+        return project.students.some(
+            (item: any) =>
+                item.status === 'accepted' &&
+                (item.student?._id === currentUser._id || item.student === currentUser._id)
+        );
+    }, [currentUser, project]);
+
+    const handleLeaveTeam = async () => {
+        if (!currentUser || currentUser.role !== 'student' || !id) return;
+
+        const confirmed = window.confirm("Tem certeza que deseja sair desta equipe?");
+        if (!confirmed) return;
+
+        setIsLeavingTeam(true);
+
+        try {
+            const response = await fetch(`${apiUrl}/projects/${id}/leave`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ studentId: currentUser._id })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                toast.success(data.message || 'Você saiu da equipe.');
+                navigate('/profile');
+            } else {
+                toast.error(data.error || 'Não foi possível sair da equipe.');
+            }
+        } catch (err) {
+            toast.error("Erro de conexão com o servidor.");
+        } finally {
+            setIsLeavingTeam(false);
+        }
+    };
+
+    const handleRespondProfessorInvite = async (status: 'accepted' | 'declined') => {
+        if (!currentUser || currentUser.role !== 'professor' || !id) return;
+
+        try {
+            const response = await fetch(`${apiUrl}/projects/${id}/respond-professor-invite`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ professorId: currentUser._id, status })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setProject(data.project);
+                toast.success(status === 'accepted' ? 'Convite de validação aceito.' : 'Convite recusado.');
+            } else {
+                toast.error(data.error || 'Não foi possível responder ao convite.');
+            }
+        } catch (err) {
+            toast.error("Erro de conexão com o servidor.");
+        }
+    };
+
     if (!project) return <div className="flex h-screen items-center justify-center font-bold text-[#003465] animate-pulse uppercase tracking-widest text-[10px]">Carregando projeto...</div>;
 
     return (
         <div className="bg-[#F0F2F5] min-h-screen pb-20 relative pt-20"> 
             
-            {/* --- HEADER FIXO --- */}
-            <header className="fixed top-0 left-0 w-full bg-white/95 backdrop-blur-md shadow-md z-[1000] h-20 flex items-center border-b border-gray-100">
-                <div className="w-full flex items-center justify-between px-6 md:px-12 lg:px-20">
-                    <img src={coloredLogo} alt="logo" className="h-10 cursor-pointer hover:scale-105 transition-transform" onClick={() => navigate('/')} />
-                    
-                    <div className="flex-1 max-w-2xl mx-8 relative">
-                        <TextBar 
-                            variant="default" 
-                            placeholder="Pesquisar talentos ou projetos..." 
-                            iconLeft="search" 
-                            value={searchTerm}
-                            onChange={(e: any) => { setSearchTerm(e.target.value); setIsDropdownVisible(true); }}
-                            onBlur={() => setTimeout(() => setIsDropdownVisible(false), 200)}
-                        />
-                        {searchTerm && isDropdownVisible && (
-                            <div className="absolute top-full left-0 w-full bg-white shadow-2xl rounded-b-2xl mt-1 border border-gray-100 overflow-hidden z-[1100] text-left max-h-[500px] overflow-y-auto">
-                                
-                                {/** CATEGORIA: ALUNOS **/}
-                                {searchResultStudents.length > 0 && (
-                                    <div>
-                                        <div className="bg-blue-50 px-5 py-3 border-y border-blue-200">
-                                            <span className="text-[10px] font-black text-[#006ACB] uppercase tracking-[0.2em] flex items-center gap-2"> Alunos </span>
-                                        </div>
-                                        {searchResultStudents.map(aluno => (
-                                            <div key={aluno._id} onClick={() => navigate(`/student/${aluno._id}`)} className="flex items-center gap-3 p-4 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-none transition-colors">
-                                                <Avatar name={aluno.name} image={aluno.profileImage} size="sm" />
-                                                <div className="flex flex-col">
-                                                    <span className="font-bold text-[#003465] text-xs">{aluno.name}</span>
-                                                    <span className="text-gray-400 text-[10px] uppercase font-bold">{aluno.course}</span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {/** CATEGORIA: PROJETOS **/}
-                                {searchResultProjects.length > 0 && (
-                                    <div>
-                                        <div className="bg-blue-50 px-5 py-3 border-y border-blue-200">
-                                            <span className="text-[10px] font-black text-[#006ACB] uppercase tracking-[0.2em] flex items-center gap-2"> Projetos </span>
-                                        </div>
-                                        {searchResultProjects.map(proj => (
-                                            <div key={proj._id} onClick={() => navigate(`/project/${proj._id}`)} className="flex items-center gap-3 p-4 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-none transition-colors">
-                                                <div className="flex flex-col">
-                                                    <span className="font-bold text-[#003465] text-xs">{proj.title}</span>
-                                                    <span className="text-gray-400 text-[9px] uppercase font-black">Tags: <span className="text-blue-400">{proj.tags?.join(', ')}</span></span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {searchResultStudents.length === 0 && searchResultProjects.length === 0 && (
-                                    <div className="p-10 text-center text-gray-400 text-xs italic">Nenhum resultado encontrado...</div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="flex-shrink-0 relative" ref={menuRef}>
-                        {currentUser ? (
-                            <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}>
-                                <div className="hidden md:flex flex-col items-end mr-1">
-                                    <span className="text-[9px] font-black text-[#006ACB] uppercase tracking-widest leading-none mb-1">
-                                        {currentUser?.role === 'professor' ? 'Docente' : 'Online'}
-                                    </span>
-                                    <span className="text-[#003465] font-bold text-xs">{currentUser?.name?.split(' ')[0] || "User"}</span>
-                                </div>
-                                <Avatar name={currentUser?.name} image={currentUser?.profileImage} size="md" className={`border-2 transition-all ${isAccountMenuOpen ? 'border-[#006ACB] scale-105 shadow-lg' : 'border-gray-200'}`} />
-                                {isAccountMenuOpen && (
-                                    <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-[24px] shadow-[0_20px_50px_rgba(0,52,101,0.15)] border border-gray-100 py-6 z-[1100] animate-in fade-in slide-in-from-top-2 duration-200 text-left">
-                                        <div className="px-8 pb-4 border-b border-gray-50 flex flex-col items-center text-center">
-                                            <p className="text-[#006ACB] text-[10px] font-black uppercase tracking-[0.2em] mb-4">Conta AcadeMe</p>
-                                            <Avatar name={currentUser?.name} image={currentUser?.profileImage} size="lg" className="border-4 border-blue-50 p-0.5 mb-3" />
-                                            <p className="text-[#003465] font-black text-lg tracking-tighter leading-tight truncate w-full">{currentUser?.name}</p>
-                                            <p className="text-gray-400 text-xs truncate w-full">{currentUser?.email}</p>
-                                        </div>
-                                        <div className="pt-4 px-2">
-                                            <button 
-                                                onClick={() => navigate(currentUser?.role === 'professor' ? '/professor-profile' : '/profile')} 
-                                                className="w-full flex items-center gap-4 px-6 py-3 text-sm font-bold text-gray-600 hover:bg-blue-50 hover:text-[#006ACB] rounded-xl transition-all group"
-                                            >
-                                                Meu Perfil
-                                            </button>
-                                            <div className="my-2 border-t border-gray-50 mx-4" />
-                                            <button onClick={handleLogout} className="w-full flex items-center gap-4 px-6 py-3 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all group">
-                                                Sair da conta
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <Button shape="pill" size="sm" className="text-xs font-bold px-6" onClick={() => navigate('/login')}>Login</Button>
-                        )}
-                    </div>
-                </div>
-            </header>
+            <AppHeader
+                searchTerm={searchTerm}
+                isDropdownVisible={isDropdownVisible}
+                searchResultStudents={searchResultStudents}
+                searchResultProjects={searchResultProjects}
+                onSearchChange={(value) => { setSearchTerm(value); setIsDropdownVisible(true); }}
+                onSearchBlur={() => setTimeout(() => setIsDropdownVisible(false), 200)}
+                onStudentSelect={(studentId) => navigate(`/student/${studentId}`)}
+                onProjectSelect={(projectId) => navigate(`/project/${projectId}`)}
+                currentUser={currentUser}
+                menuRef={menuRef}
+                isAccountMenuOpen={isAccountMenuOpen}
+                onToggleAccountMenu={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
+                onNavigateHome={() => navigate('/')}
+                onNavigateProfile={() => navigate(currentUser?.role === 'professor' ? '/professor-profile' : '/profile')}
+                onLogout={handleLogout}
+                unauthenticatedActions={<Button shape="pill" size="sm" className="text-xs font-bold px-6" onClick={() => navigate('/login')}>Login</Button>}
+            />
 
             {/* MODAL ZOOM */}
             {selectedImage && (
@@ -268,7 +265,10 @@ const ProjectView: React.FC = () => {
                         <div className="flex flex-col gap-4">
                             <div className="bg-white/[0.03] border border-white/[0.08] p-4 rounded-[20px] shadow-inner">
                                 <label className="text-blue-300/60 text-[12px] font-black uppercase tracking-[0.2em] block mb-1">Título do Trabalho</label>
-                                <h1 className="text-xl md:text-2xl font-black tracking-tighter text-white uppercase">{project.title}</h1>
+                                <div className="flex items-center gap-3">
+                                    <h1 className="text-xl md:text-2xl font-black tracking-tighter text-white uppercase">{project.title}</h1>
+                                    {isProjectValidated(project) && <ValidatedBadge compact />}
+                                </div>
                             </div>
                             <div className="bg-white/[0.03] border border-white/[0.08] p-4 rounded-[20px] shadow-inner flex-1 flex flex-col">
                                 <label className="text-blue-300/60 text-[12px] font-black uppercase tracking-[0.2em] block mb-1">Sobre o projeto</label>
@@ -295,6 +295,31 @@ const ProjectView: React.FC = () => {
                                     </div>
                                 ))}
                             </div>
+                            {project.invitedProfessors?.length > 0 && (
+                                <div className="border-t border-white/[0.05] pt-3 flex flex-col gap-2.5">
+                                    <h4 className="text-amber-100 text-[10px] font-black uppercase tracking-widest">Docente Convidado</h4>
+                                    {project.invitedProfessors.map((invite: any, i: number) => (
+                                        <div key={`prof-${i}`} className="flex items-center gap-2.5 bg-amber-500/10 p-2.5 rounded-lg border border-amber-300/10">
+                                            <Avatar name={invite.professor?.name} image={invite.professor?.profileImage} size="sm" className="border border-amber-200/20" />
+                                            <div className="flex flex-col flex-1">
+                                                <span className="text-white/90 font-bold text-[12px]">{invite.professor?.academicTitle || 'Prof.'} {invite.professor?.name}</span>
+                                                <span className={`text-[8px] font-black uppercase tracking-widest ${invite.status === 'accepted' ? 'text-green-400' : invite.status === 'pending' ? 'text-yellow-400' : 'text-red-400'}`}>
+                                                    {invite.status === 'accepted' ? 'Docente Confirmado' : invite.status === 'pending' ? 'Convite Pendente' : 'Convite Recusado'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            {isCurrentUserAcceptedMember && (
+                                <button
+                                    onClick={handleLeaveTeam}
+                                    disabled={isLeavingTeam}
+                                    className="w-full mt-1 rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-red-200 transition-all hover:bg-red-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                                >
+                                    {isLeavingTeam ? 'Saindo...' : 'Sair da equipe'}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </header>
@@ -304,7 +329,38 @@ const ProjectView: React.FC = () => {
             <main className="w-full px-6 md:px-12 lg:px-20 py-10 space-y-12">
                 
                 {/* --- 1. SESSÃO DO PROFESSOR (VALIDAÇÃO) --- */}
-                {currentUser?.role === 'professor' && !hasAlreadyEndorsed && (
+                {currentUser?.role === 'professor' && currentProfessorInvite?.status === 'pending' && (
+                    <section className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-6 md:p-8 text-left relative overflow-hidden">
+                        <div className="absolute left-0 top-0 h-full w-2 bg-amber-500" />
+                        <div className="flex flex-col gap-5 pl-4">
+                            <div className="flex items-center gap-3">
+                                <h2 className="font-black text-[#003465] uppercase text-xs tracking-[0.2em]">Convite de Validação</h2>
+                                <span className="text-[10px] bg-amber-50 text-amber-700 px-3 py-1 rounded-full font-bold border border-amber-100">Pendente</span>
+                            </div>
+                            <p className="text-xs text-gray-500 leading-relaxed max-w-2xl">Você foi convidado para avaliar este trabalho. Aceite o convite para liberar o chancelamento acadêmico.</p>
+                            <div className="flex gap-3 justify-end">
+                                <Button onClick={() => handleRespondProfessorInvite('declined')} shape="pill" className="text-red-500 bg-red-50 border border-red-100 font-black uppercase tracking-widest text-[10px] px-8 py-4 shadow-none">
+                                    Recusar
+                                </Button>
+                                <Button onClick={() => handleRespondProfessorInvite('accepted')} shape="pill" className="text-white font-black uppercase tracking-widest text-[10px] px-10 py-4 shadow-md">
+                                    Aceitar Convite
+                                </Button>
+                            </div>
+                        </div>
+                    </section>
+                )}
+
+                {currentUser?.role === 'professor' && !currentProfessorInvite && (
+                    <section className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-6 md:p-8 text-left relative overflow-hidden">
+                        <div className="absolute left-0 top-0 h-full w-2 bg-gray-300" />
+                        <div className="flex flex-col gap-3 pl-4">
+                            <h2 className="font-black text-[#003465] uppercase text-xs tracking-[0.2em]">Validação Restrita</h2>
+                            <p className="text-xs text-gray-500 leading-relaxed max-w-2xl">Este projeto pode ser visualizado por qualquer professor, mas apenas docentes convidados e confirmados podem emitir a validação.</p>
+                        </div>
+                    </section>
+                )}
+
+                {currentUser?.role === 'professor' && canCurrentProfessorEndorse && !hasAlreadyEndorsed && (
                     <section className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-6 md:p-8 text-left relative overflow-hidden">
                         <div className="absolute left-0 top-0 h-full w-2 bg-green-500" />
                         <div className="flex flex-col gap-5 pl-4">
@@ -386,9 +442,9 @@ const ProjectView: React.FC = () => {
                 )}
 
                 {/* --- 3. PÔSTERES --- */}
-                {project.posters?.length > 0 && (
-                    <section className="text-left">
-                        <h2 className="text-xl font-black text-[#003465] mb-6 border-b-4 border-[#006ACB] w-fit pb-1 uppercase tracking-tighter">Pôsteres</h2>
+                <section className="text-left">
+                    <h2 className="text-xl font-black text-[#003465] mb-6 border-b-4 border-[#006ACB] w-fit pb-1 uppercase tracking-tighter">Pôsteres</h2>
+                    {project.posters?.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
                             {project.posters.map((p: any, i: number) => (
                                 <div key={i} className="bg-white p-1.5 rounded-[20px] border border-gray-100 overflow-hidden cursor-zoom-in group shadow-sm" onClick={() => setSelectedImage(p.url)}>
@@ -398,32 +454,42 @@ const ProjectView: React.FC = () => {
                                 </div>
                             ))}
                         </div>
-                    </section>
-                )}
+                    ) : (
+                        <EmptyState title="Nenhum pôster enviado" description="Os materiais visuais deste projeto aparecerão aqui." icon="search" compact />
+                    )}
+                </section>
 
                 {/* --- 4. DOCUMENTOS E REFERÊNCIAS --- */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <section className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-6 md:p-8 text-left">
                         <h2 className="font-black text-[#003465] uppercase text-xs tracking-[0.2em] mb-6 border-l-4 border-[#006ACB] pl-4">Documentação</h2>
-                        <div className="space-y-2.5">
-                            {project.files?.map((file: any, i: number) => (
-                                <div key={i} className="flex justify-between items-center p-3.5 bg-gray-50 rounded-2xl hover:bg-blue-50 border border-transparent hover:border-blue-100 transition-all group">
-                                    <span className="text-blue-900 font-bold text-xs truncate max-w-xs">{file.name}</span>
-                                    <Button onClick={() => handleDownload(file.base64, file.name)} size="sm" shape="pill" className="text-[9px] px-5 py-2 uppercase font-black shadow-sm">Baixar</Button>
-                                </div>
-                            ))}
-                        </div>
+                        {project.files?.length > 0 ? (
+                            <div className="space-y-2.5">
+                                {project.files.map((file: any, i: number) => (
+                                    <div key={i} className="flex justify-between items-center p-3.5 bg-gray-50 rounded-2xl hover:bg-blue-50 border border-transparent hover:border-blue-100 transition-all group">
+                                        <span className="text-blue-900 font-bold text-xs truncate max-w-xs">{file.name}</span>
+                                        <Button onClick={() => handleDownload(file.base64, file.name)} size="sm" shape="pill" className="text-[9px] px-5 py-2 uppercase font-black shadow-sm">Baixar</Button>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <EmptyState title="Nenhum documento anexado" description="Arquivos complementares do projeto serão exibidos aqui." icon="search" compact />
+                        )}
                     </section>
 
                     <section className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-6 md:p-8 text-left">
                         <h2 className="font-black text-[#003465] uppercase text-xs tracking-[0.2em] mb-6 border-l-4 border-[#006ACB] pl-4">Referências</h2>
-                        <div className="space-y-2.5">
-                            {project.references?.map((ref: string, i: number) => (
-                                <div key={i} className="p-3.5 bg-gray-50 rounded-2xl border-l-4 border-blue-400 hover:bg-blue-50 transition-colors">
-                                    <a href={ref.startsWith('http') ? ref : `https://${ref}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 hover:text-blue-800 underline italic break-all font-bold">{ref}</a>
-                                </div>
-                            ))}
-                        </div>
+                        {project.references?.length > 0 ? (
+                            <div className="space-y-2.5">
+                                {project.references.map((ref: string, i: number) => (
+                                    <div key={i} className="p-3.5 bg-gray-50 rounded-2xl border-l-4 border-blue-400 hover:bg-blue-50 transition-colors">
+                                        <a href={ref.startsWith('http') ? ref : `https://${ref}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 hover:text-blue-800 underline italic break-all font-bold">{ref}</a>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <EmptyState title="Nenhuma referência cadastrada" description="As referências bibliográficas do projeto aparecerão nesta área." icon="search" compact />
+                        )}
                     </section>
                 </div>
 
@@ -436,3 +502,4 @@ const ProjectView: React.FC = () => {
 };
 
 export default ProjectView;
+
