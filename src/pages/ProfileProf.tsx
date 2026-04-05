@@ -1,4 +1,4 @@
-/* eslint-disable jsx-a11y/alt-text */
+﻿/* eslint-disable jsx-a11y/alt-text */
 import React, { useRef, useEffect, useState } from 'react';
 import coloredLogo from '../assets/colored-logo.svg'; 
 import logoBlockchain from '../assets/logoBlockchain.svg'; 
@@ -8,18 +8,12 @@ import { Icon } from '../components/Icon';
 import { toast } from 'react-toastify';
 import Avatar from '../components/Avatar';
 import ProjectCard from '../components/ProjectCard';
-
-interface ProfessorData {
-    _id: string;
-    name: string;
-    email: string;
-    department: string;
-    academicTitle: string;
-    bio: string;
-    areasOfExpertise: string[];
-    profileImage?: string; 
-    role: string;
-}
+import ValidatedBadge from '../components/ValidatedBadge';
+import InviteMenu from '../components/InviteMenu';
+import AppHeader from '../components/AppHeader';
+import EmptyState from '../components/EmptyState';
+import { ProfessorSummary, ProjectRecord, SearchResults } from '../types/models';
+import { isProjectValidated } from '../utils/project';
 
 const EXPERTISE_OPTIONS = [
     "Engenharia de Software", "Banco de Dados", "Redes de Computadores", 
@@ -30,10 +24,12 @@ const EXPERTISE_OPTIONS = [
 const ProfileProf: React.FC = () => {
     const fileInputRef = useRef<HTMLInputElement>(null); 
     const menuRef = useRef<HTMLDivElement>(null); 
+    const inviteMenuRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
     
-    const [user, setUser] = useState<ProfessorData | null>(null);
-    const [endorsedProjects, setEndorsedProjects] = useState<any[]>([]); 
+    const [user, setUser] = useState<ProfessorSummary | null>(null);
+    const [endorsedProjects, setEndorsedProjects] = useState<ProjectRecord[]>([]); 
+    const [invites, setInvites] = useState<ProjectRecord[]>([]);
     
     const [isEditingBio, setIsEditingBio] = useState(false);
     const [tempBio, setTempBio] = useState("");
@@ -43,10 +39,11 @@ const ProfileProf: React.FC = () => {
 
     const [searchTerm, setSearchTerm] = useState(""); 
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
-    const [searchResultStudents, setSearchResultStudents] = useState<any[]>([]);
-    const [searchResultProjects, setSearchResultProjects] = useState<any[]>([]);
+    const [searchResultStudents, setSearchResultStudents] = useState<SearchResults['students']>([]);
+    const [searchResultProjects, setSearchResultProjects] = useState<SearchResults['projects']>([]);
 
     const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false); 
+    const [isInviteMenuOpen, setIsInviteMenuOpen] = useState(false);
 
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
@@ -54,6 +51,9 @@ const ProfileProf: React.FC = () => {
         const handleClickOutside = (event: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
                 setIsAccountMenuOpen(false);
+            }
+            if (inviteMenuRef.current && !inviteMenuRef.current.contains(event.target as Node)) {
+                setIsInviteMenuOpen(false);
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
@@ -90,8 +90,13 @@ const ProfileProf: React.FC = () => {
 
         fetch(`${apiUrl}/professors/${parsedUser._id}/projects`)
             .then(res => res.json())
-            .then(data => setEndorsedProjects(data))
+            .then((data: ProjectRecord[]) => setEndorsedProjects(data))
             .catch(() => console.error("Erro ao carregar projetos chancelados."));
+
+        fetch(`${apiUrl}/professors/${parsedUser._id}/invites`)
+            .then(res => res.json())
+            .then((data: ProjectRecord[]) => setInvites(data))
+            .catch(() => console.error("Erro ao carregar convites de validação."));
 
     }, [navigate, apiUrl]);
 
@@ -105,7 +110,7 @@ const ProfileProf: React.FC = () => {
         const delayDebounceFn = setTimeout(() => {
             fetch(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`)
                 .then(res => res.json())
-                .then(data => {
+                .then((data: SearchResults) => {
                     setSearchResultStudents(data.students || []);
                     setSearchResultProjects(data.projects || []);
                 })
@@ -122,7 +127,7 @@ const ProfileProf: React.FC = () => {
         navigate('/');
     };
 
-    const handleUpdateProfile = async (updates: Partial<ProfessorData>, silent = false) => {
+    const handleUpdateProfile = async (updates: Partial<ProfessorSummary>, silent = false) => {
         if (!user) return;
         try {
             const response = await fetch(`${apiUrl}/professors/${user._id}`, {
@@ -136,7 +141,7 @@ const ProfileProf: React.FC = () => {
                 const newUserState = { ...updatedUser, role: 'professor' };
                 setUser(newUserState);
                 localStorage.setItem('@AcadeMe:user', JSON.stringify(newUserState));
-                if (!silent) toast.success('✨ Perfil atualizado!');
+                if (!silent) toast.success('Perfil atualizado.');
             }
         } catch (err) {
             toast.error('Erro de conexão.');
@@ -168,128 +173,85 @@ const ProfileProf: React.FC = () => {
             reader.readAsDataURL(file);
             reader.onload = async () => {
                 await handleUpdateProfile({ profileImage: reader.result as string }, true);
-                toast.success('📸 Foto atualizada!');
+                toast.success('Foto atualizada.');
             };
         }
     };
+
+    const handleRespondInvite = async (projectId: string, status: 'accepted' | 'declined') => {
+        if (!user) return;
+
+        try {
+            const response = await fetch(`${apiUrl}/projects/${projectId}/respond-professor-invite`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ professorId: user._id, status })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setInvites(prev => prev.filter((invite) => invite._id !== projectId));
+                toast.success(status === 'accepted' ? 'Convite aceito. Você já pode validar o projeto.' : 'Convite recusado.');
+                if (status === 'accepted') {
+                    navigate(`/project/${projectId}`);
+                }
+            } else {
+                toast.error(data.error || 'Não foi possível responder ao convite.');
+            }
+        } catch (err) {
+            toast.error('Erro de conexão.');
+        }
+    };
+
+    const inviteMenuItems = invites.map((invite) => ({
+        id: invite._id,
+        title: invite.title,
+        subtitle: 'Convite para validação docente',
+        avatarName: invite.title || 'P',
+        avatarImage: invite.imageUrl
+    }));
 
     if (!user) return <div className="flex h-screen items-center justify-center font-bold text-[#003465]">Carregando Painel Docente...</div>;
 
     return (
         <div className="ProfessorProfile flex flex-col min-h-screen bg-gray-50 relative pt-20">
             
-            {/** --- HEADER FIXO (OMNIBOX) --- **/}
-            <header className="fixed top-0 left-0 w-full bg-white/95 backdrop-blur-md shadow-md z-[1000] py-3 border-b border-gray-100 h-20 flex items-center">
-                <div className="w-full flex items-center justify-between px-6 md:px-12 lg:px-20">
-                    
-                    <div className="flex-shrink-0">
-                        <img src={coloredLogo} alt="logo" className="h-10 cursor-pointer hover:scale-105 transition-transform" onClick={() => navigate('/')} />
-                    </div>
-                    
-                    <div className="flex-1 max-w-2xl mx-8 relative">
-                        <TextBar 
-                            variant="default" 
-                            placeholder="Buscar alunos ou projetos para validar..." 
-                            iconLeft="search" 
-                            hideIconsOnInput 
-                            value={searchTerm}
-                            onChange={(e: any) => {
-                                setSearchTerm(e.target.value);
-                                setIsDropdownVisible(true);
-                            }}
-                            onBlur={() => setTimeout(() => setIsDropdownVisible(false), 200)}
-                        />
-
-                        {/* DROPDOWN UNIFICADO */}
-                        {searchTerm && isDropdownVisible && (
-                            <div className="absolute top-full left-0 w-full bg-white shadow-[0_20px_60px_rgba(0,52,101,0.15)] rounded-b-3xl mt-1 border border-gray-100 overflow-hidden text-left z-[1100] max-h-[500px] overflow-y-auto custom-scrollbar">
-                                
-                                {searchResultStudents.length > 0 && (
-                                    <div>                                        
-                                        <div className="bg-blue-50 px-5 py-3 border-b border-blue-200">
-                                            <span className="text-[10px] font-black text-[#006ACB] uppercase tracking-[0.2em] flex items-center gap-2">
-                                                Alunos
-                                            </span>
-                                        </div>
-                                        {searchResultStudents.map(aluno => (
-                                            <div key={aluno._id} onClick={() => navigate(`/student/${aluno._id}`)} className="flex items-center gap-4 p-4 hover:bg-blue-50/50 cursor-pointer border-b border-gray-50 last:border-none group">
-                                                <Avatar name={aluno.name} image={aluno.profileImage} size="sm" className="shadow-sm" />
-                                                <div className="flex flex-col flex-1">
-                                                    <span className="font-bold text-[#003465] text-xs group-hover:text-[#006ACB] transition-colors">{aluno.name}</span>
-                                                    <span className="text-gray-400 text-[9px] uppercase font-black tracking-wider mt-0.5">{aluno.course}</span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {searchResultProjects.length > 0 && (
-                                    <div>                                        
-                                        <div className="bg-blue-50 px-5 py-3 border-y border-blue-200">
-                                            <span className="text-[10px] font-black text-[#006ACB] uppercase tracking-[0.2em] flex items-center gap-2">
-                                                Projetos
-                                            </span>
-                                        </div>
-                                        {searchResultProjects.map(proj => (
-                                            <div key={proj._id} onClick={() => navigate(`/project/${proj._id}`)} className="flex items-center gap-4 p-4 hover:bg-green-50/50 cursor-pointer border-b border-gray-50 last:border-none group">
-                                                <div className="flex flex-col flex-1 overflow-hidden">
-                                                    <span className="font-bold text-[#003465] text-xs group-hover:text-[#006ACB] transition-colors truncate">{proj.title}</span>
-                                                    <span className="text-gray-400 text-[9px] uppercase font-black tracking-wider mt-0.5 truncate">
-                                                        Tags: <span className="text-blue-400">{proj.tags?.join(', ') || 'Nenhuma'}</span>
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {searchResultStudents.length === 0 && searchResultProjects.length === 0 && (
-                                    <div className="p-10 text-center flex flex-col items-center justify-center opacity-50">
-                                        <Icon iconCenter="search" className="w-8 h-8 mb-3 text-[#003465]" />
-                                        <p className="text-[#003465] font-black text-xs uppercase tracking-widest">Nenhum resultado</p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="flex-shrink-0 relative" ref={menuRef}>
-                        <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}>
-                            <div className="hidden md:flex flex-col items-end mr-1">
-                                <span className="text-[9px] font-black text-[#006ACB] uppercase tracking-widest leading-none mb-1">Docente</span>
-                                <span className="text-[#003465] font-bold text-xs">{user.name.split(' ')[0]}</span>
-                            </div>
-                            <Avatar name={user.name} image={user.profileImage} size="md" className={`border-2 transition-all ${isAccountMenuOpen ? 'border-[#006ACB] scale-105' : 'border-gray-200 group-hover:border-[#006ACB]'}`} />
-                        </div>
-                        {isAccountMenuOpen && (
-                            <div className="absolute right-0 top-full mt-3 w-72 bg-white rounded-[24px] shadow-[0_20px_50px_rgba(0,52,101,0.15)] border border-gray-100 py-6 z-[1100] animate-in fade-in slide-in-from-top-3 duration-200">
-                                <div className="px-8 pb-4 border-b border-gray-50 flex flex-col items-center text-center">
-                                    <p className="text-[#006ACB] text-[10px] font-black uppercase tracking-[0.2em] mb-4">Painel Docente</p>
-                                    <Avatar name={user.name} image={user.profileImage} size="lg" className="border-4 border-blue-50 p-0.5 mb-3" />
-                                    <p className="text-[#003465] font-black text-lg tracking-tighter leading-tight truncate w-full">{user.name}</p>
-                                    <p className="text-gray-400 text-xs truncate w-full">{user.email}</p>
-                                </div>
-                                <div className="pt-4 px-2 text-left">
-                                    <button 
-                                        onClick={() => { 
-                                            setIsAccountMenuOpen(false); 
-                                            navigate('/professor-profile'); 
-                                            window.scrollTo({ top: 0, behavior: 'smooth' }); 
-                                        }} 
-                                        className="w-full flex items-center gap-4 px-6 py-3 text-sm font-bold text-gray-600 hover:bg-blue-50 hover:text-[#006ACB] rounded-xl transition-all group"
-                                    >
-                                        Meu Perfil
-                                    </button>
-                                    <div className="my-2 border-t border-gray-50 mx-4" />
-                                    <button onClick={handleLogout} className="w-full flex items-center gap-4 px-6 py-3 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all">
-                                        Sair da conta
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </header>
+            <AppHeader
+                searchTerm={searchTerm}
+                isDropdownVisible={isDropdownVisible}
+                searchResultStudents={searchResultStudents}
+                searchResultProjects={searchResultProjects}
+                onSearchChange={(value) => {
+                    setSearchTerm(value);
+                    setIsDropdownVisible(true);
+                }}
+                onSearchBlur={() => setTimeout(() => setIsDropdownVisible(false), 200)}
+                onStudentSelect={(studentId) => navigate(`/student/${studentId}`)}
+                onProjectSelect={(projectId) => navigate(`/project/${projectId}`)}
+                currentUser={user}
+                menuRef={menuRef}
+                isAccountMenuOpen={isAccountMenuOpen}
+                onToggleAccountMenu={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
+                onNavigateHome={() => navigate('/')}
+                onNavigateProfile={() => {
+                    setIsAccountMenuOpen(false);
+                    navigate('/professor-profile');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                onLogout={handleLogout}
+                inviteMenu={{
+                    menuRef: inviteMenuRef,
+                    title: 'Convites de Validação',
+                    emptyMessage: 'Nenhuma nova notificação',
+                    isOpen: isInviteMenuOpen,
+                    count: invites.length,
+                    items: inviteMenuItems,
+                    onToggle: () => setIsInviteMenuOpen(!isInviteMenuOpen),
+                    onAccept: (projectId) => handleRespondInvite(projectId, 'accepted'),
+                    onDecline: (projectId) => handleRespondInvite(projectId, 'declined')
+                }}
+            />
             
             <div className="profile-section flex flex-col md:flex-row flex-grow">
                 {/** --- SIDEBAR DOCENTE --- **/}
@@ -368,7 +330,7 @@ const ProfileProf: React.FC = () => {
                                 {user.areasOfExpertise?.map((exp, i) => (
                                     <div key={i} className={`flex items-center gap-2 text-[10px] px-3 py-1.5 rounded-full uppercase font-bold border transition-all ${isEditingExpertise ? "bg-white text-[#003465] border-white animate-pulse shadow-xl scale-105" : "bg-white/10 text-white border-white/10"}`}>
                                         {exp}
-                                        {isEditingExpertise && <button onClick={() => removeExpertise(exp)} className="hover:text-red-500 transition-colors bg-gray-100 rounded-full w-4 h-4 flex items-center justify-center text-[8px] text-[#003465]">✕</button>}
+                                        {isEditingExpertise && <button onClick={() => removeExpertise(exp)} className="hover:text-red-500 transition-colors bg-gray-100 rounded-full w-4 h-4 flex items-center justify-center text-[8px] text-[#003465]">X</button>}
                                     </div>
                                 ))}
                                 {user.areasOfExpertise?.length === 0 && !isEditingExpertise && (
@@ -396,20 +358,20 @@ const ProfileProf: React.FC = () => {
                                     title={proj.title}
                                     description={proj.description}
                                     tags={proj.tags || ["AcadeMe"]}
-                                    date={new Date(proj.createdAt).toLocaleDateString()}
+                                    date={new Date(proj.createdAt || Date.now()).toLocaleDateString()}
                                     imageUrl={proj.imageUrl || logoBlockchain} 
+                                    isValidated={isProjectValidated(proj)}
                                     onView={(id) => navigate(`/project/${id}`)}
                                 />
                             ))}
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center justify-center h-full opacity-40 py-20 text-center border-4 border-dashed border-gray-200 rounded-[40px] bg-white/50">
-                            <Icon iconCenter="search" className="w-16 h-16 text-[#003465] mb-4" />
-                            <h2 className="font-black text-[#003465] text-xl tracking-tighter uppercase mb-2">Nenhum chancelamento</h2>
-                            <p className="text-gray-500 text-sm max-w-md italic font-medium leading-relaxed">
-                                Utilize a barra de pesquisa no topo da tela para encontrar trabalhos e emitir seu selo de validação formal.
-                            </p>
-                        </div>
+                        <EmptyState
+                            title="Nenhum chancelamento"
+                            description="Use a busca no topo para localizar trabalhos e registrar sua validação."
+                            icon="search"
+                            className="py-20"
+                        />
                     )}
 
                 </div>
@@ -419,3 +381,5 @@ const ProfileProf: React.FC = () => {
 };
 
 export default ProfileProf;
+
+

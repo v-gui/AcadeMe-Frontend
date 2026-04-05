@@ -16,6 +16,8 @@ import ShowcaseProjectCard from '../components/ShowcaseProjectCard';
 import { Icon } from '../components/Icon';
 import { toast } from 'react-toastify';
 import Avatar from '../components/Avatar';
+import ValidatedBadge from '../components/ValidatedBadge';
+import { isProjectValidated } from '../utils/project';
 
 interface Aluno {
     _id: string;
@@ -159,7 +161,10 @@ const Home: React.FC = () => {
                                         {searchResultProjects.map(proj => (
                                             <div key={proj._id} onClick={() => navigate(`/project/${proj._id}`)} className="flex items-center gap-4 p-4 hover:bg-green-50/50 cursor-pointer border-b border-gray-50 last:border-none group">
                                                 <div className="flex flex-col flex-1 overflow-hidden">
-                                                    <span className="font-bold text-[#003465] text-xs group-hover:text-[#006ACB] transition-colors truncate">{proj.title}</span>
+                                                    <div className="font-bold text-[#003465] text-xs group-hover:text-[#006ACB] transition-colors flex items-center gap-2">
+                                                        <span className="truncate">{proj.title}</span>
+                                                        {isProjectValidated(proj) && <ValidatedBadge compact />}
+                                                    </div>
                                                     <span className="text-gray-400 text-[9px] uppercase font-black tracking-wider mt-0.5 truncate">
                                                         Tags: <span className="text-blue-400">{proj.tags?.join(', ') || 'Nenhuma'}</span>
                                                     </span>
@@ -231,10 +236,10 @@ const Home: React.FC = () => {
                     </h1>
                     {!currentUser && (
                         <div className="top-buttons-container flex flex-col md:flex-row items-center justify-center gap-4">
-                            <Button size='default' shape='pill' className='font-bold min-w-[171px] hover:bg-black transition-all' onClick={() => navigate('/signup')}>
+                            <Button size='default' shape='pill' className='font-bold min-w-[171px] justify-center text-center hover:bg-black transition-all' onClick={() => navigate('/signup')}>
                                 Cadastre-se
                             </Button>
-                            <Button size='default' shape='pill' className='font-bold min-w-[171px] hover:bg-black transition-all' onClick={() => navigate('/login')}>
+                            <Button size='default' shape='pill' className='font-bold min-w-[171px] justify-center text-center hover:bg-black transition-all' onClick={() => navigate('/login')}>
                                 Login
                             </Button>
                         </div>
@@ -255,6 +260,20 @@ const Home: React.FC = () => {
                             Com o AcadeMe o aluno é capaz de destacar toda a sua trajetória acadêmica, trazendo visibilidade para todas atividades feitas na faculdade.
                         </p>
                     </div>
+                </div>
+            </section>
+
+            {/** 3. SEÇÃO SHARE **/}
+            <section id="share-section" className='bg-gradient-to-r from-[#006ACB] to-[#003465] min-h-screen flex items-center justify-center px-8 md:px-16 lg:px-32'>
+                {/* Removido max-w-7xl para permitir expansão total */}
+                <div className="share-container flex flex-col md:flex-row items-center justify-between w-full gap-10 md:gap-56">
+                    <div className="search-content-body flex flex-col items-center text-center md:items-start md:text-left flex-1 lg:mr-20">
+                        <h1 className='share-title text-[#F0F2F5] text-[28px] md:text-[40px] mb-4 font-bold'>Compartilhe</h1>
+                        <p className='about-share text-[#F0F2F5] text-[18px] md:text-[24px] mb-10 leading-relaxed'>
+                            Você pode compartilhar seu portfólio com colegas, professores e possíveis recrutadores.
+                        </p>
+                    </div>
+                    <img src={studentsMoldure} alt="happy-students" className="w-80 md:w-[500px]" />
                 </div>
             </section>
 
@@ -285,11 +304,16 @@ const Home: React.FC = () => {
             </section>
 
             {/** FOOTER **/}
-            <footer className='footer-container flex flex-col md:flex-row items-center justify-between px-10 md:px-20 lg:px-32 py-16 bg-white border-t border-gray-100'>
-                <img src={coloredLogo} alt="Logo" className="w-16 mb-8 md:mb-0" />
-                <ul className='grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4 text-[#006ACB] font-semibold'>
-                    <li><a href="https://github.com/v-gui" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4"><img src={githubLogo} className='h-4 w-4'/><span>github.com/v-gui</span></a></li>
-                </ul>
+            <footer className='footer-container flex flex-col md:flex-row md:items-end justify-between gap-6 px-10 md:px-20 lg:px-32 py-8 bg-white border-t border-gray-100'>
+                <img src={coloredLogo} alt="Logo" className="w-16 mx-auto md:mx-0 shrink-0" />
+
+                <div className="w-full md:w-auto flex justify-center md:justify-end md:self-end">
+                    <ul className='flex flex-col md:flex-row items-center md:items-end gap-4 md:gap-8 text-[#006ACB] font-semibold'>
+                        <li><a href="https://github.com/v-gui" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4"><img src={githubLogo} className='h-4 w-4'/><span>github.com/v-gui</span></a></li>
+                        <li><a href="https://github.com/lucasmmps" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4"><img src={githubLogo} className='h-4 w-4'/><span>github.com/lucasmmps</span></a></li>
+                        <li><a href="https://github.com/caique18" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4"><img src={githubLogo} className='h-4 w-4'/><span>github.com/caique18</span></a></li>
+                    </ul>
+                </div>
             </footer>
 
             <img src={moldure} alt="Moldura" className="absolute bottom-0 right-0 z-0 pointer-events-none w-[500px] opacity-10 hidden md:block" />

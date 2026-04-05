@@ -9,6 +9,10 @@ import coloredLogo from '../assets/colored-logo.svg';
 import logoBlockchain from '../assets/logoBlockchain.svg';
 import { toast } from 'react-toastify';
 import Avatar from '../components/Avatar';
+import ValidatedBadge from '../components/ValidatedBadge';
+import AppHeader from '../components/AppHeader';
+import EmptyState from '../components/EmptyState';
+import { isProjectValidated } from '../utils/project';
 
 interface Aluno {
     _id: string;
@@ -96,114 +100,32 @@ const StudentProfileView: React.FC = () => {
     return (
         <div className="flex flex-col min-h-screen bg-gray-50 relative pt-20"> 
             
-            {/** --- HEADER FIXO PADRONIZADO --- **/}
-            <header className="fixed top-0 left-0 w-full bg-white/95 backdrop-blur-md shadow-md z-[1000] border-b border-gray-100 h-20 flex items-center"> 
-                <div className="w-full flex items-center justify-between px-6 md:px-12 lg:px-20">
-                    
-                    <div className="flex-shrink-0">
-                        <img src={coloredLogo} alt="logo" className="h-10 cursor-pointer hover:scale-105 transition-transform" onClick={() => navigate('/')} />
+            <AppHeader
+                searchTerm={searchTerm}
+                isDropdownVisible={isDropdownVisible}
+                searchResultStudents={searchResultStudents}
+                searchResultProjects={searchResultProjects}
+                onSearchChange={(value) => {
+                    setSearchTerm(value);
+                    setIsDropdownVisible(true);
+                }}
+                onSearchBlur={() => setTimeout(() => setIsDropdownVisible(false), 200)}
+                onStudentSelect={(studentId) => navigate(`/student/${studentId}`)}
+                onProjectSelect={(projectId) => navigate(`/project/${projectId}`)}
+                currentUser={currentUser}
+                menuRef={menuRef}
+                isAccountMenuOpen={isAccountMenuOpen}
+                onToggleAccountMenu={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
+                onNavigateHome={() => navigate('/')}
+                onNavigateProfile={() => navigate(currentUser?.role === 'professor' ? '/professor-profile' : '/profile')}
+                onLogout={handleLogout}
+                unauthenticatedActions={
+                    <div className="flex gap-4">
+                        <Button shape="pill" size="sm" className="text-xs font-bold px-6" onClick={() => navigate('/login')}>Login</Button>
+                        <Button shape="pill" size="sm" className="text-xs font-bold px-6" onClick={() => navigate('/signup')}>Cadastre-se</Button>
                     </div>
-                    
-                    <div className="flex-1 max-w-2xl mx-8 relative">
-                        <TextBar 
-                            variant="default" 
-                            placeholder="Pesquisar talentos ou projetos..." 
-                            iconLeft="search" 
-                            hideIconsOnInput 
-                            value={searchTerm}
-                            onChange={(e: any) => {
-                                setSearchTerm(e.target.value);
-                                setIsDropdownVisible(true);
-                            }}
-                            onBlur={() => setTimeout(() => setIsDropdownVisible(false), 200)}
-                        />
-
-                        {searchTerm && isDropdownVisible && (
-                            <div className="absolute top-full left-0 w-full bg-white shadow-2xl rounded-b-2xl mt-1 border border-gray-100 overflow-hidden text-left z-[1100] max-h-[500px] overflow-y-auto">
-                                
-                                {/** CATEGORIA: ALUNOS **/}
-                                {searchResultStudents.length > 0 && (
-                                    <div>
-                                        <div className="bg-blue-50 px-5 py-3 border-y border-blue-200">
-                                            <span className="text-[10px] font-black text-[#006ACB] uppercase tracking-[0.2em] flex items-center gap-2"> Alunos </span>
-                                        </div>
-                                        {searchResultStudents.map(aluno => (
-                                            <div key={aluno._id} onClick={() => navigate(`/student/${aluno._id}`)} className="flex items-center gap-3 p-4 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-none transition-colors">
-                                                <Avatar name={aluno.name} image={aluno.profileImage} size="sm" />
-                                                <div className="flex flex-col">
-                                                    <span className="font-bold text-[#003465] text-xs">{aluno.name}</span>
-                                                    <span className="text-gray-400 text-[10px] uppercase font-bold">{aluno.course}</span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {/** CATEGORIA: PROJETOS **/}
-                                {searchResultProjects.length > 0 && (
-                                    <div>
-                                        <div className="bg-blue-50 px-5 py-3 border-y border-blue-200">
-                                            <span className="text-[10px] font-black text-[#006ACB] uppercase tracking-[0.2em] flex items-center gap-2"> Projetos </span>
-                                        </div>
-                                        {searchResultProjects.map(proj => (
-                                            <div key={proj._id} onClick={() => navigate(`/project/${proj._id}`)} className="flex items-center gap-3 p-4 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-none transition-colors">
-                                                <div className="flex flex-col">
-                                                    <span className="font-bold text-[#003465] text-xs">{proj.title}</span>
-                                                    <span className="text-gray-400 text-[9px] uppercase font-black">Tags: <span className="text-blue-400">{proj.tags?.join(', ')}</span></span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {searchResultStudents.length === 0 && searchResultProjects.length === 0 && (
-                                    <div className="p-10 text-center text-gray-400 text-xs italic">Nenhum resultado encontrado...</div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="flex-shrink-0 relative" ref={menuRef}>
-                        {currentUser ? (
-                            <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}>
-                                <div className="hidden md:flex flex-col items-end mr-1">
-                                    <span className="text-[9px] font-black text-[#006ACB] uppercase tracking-widest leading-none mb-1">
-                                        {currentUser?.role === 'professor' ? 'Docente' : 'Online'}
-                                    </span>
-                                    <span className="text-[#003465] font-bold text-xs">{currentUser.name.split(' ')[0]}</span>
-                                </div>
-                                <Avatar name={currentUser.name} image={currentUser.profileImage} size="md" className={`border-2 transition-all ${isAccountMenuOpen ? 'border-[#006ACB] scale-105 shadow-lg' : 'border-gray-200 group-hover:border-[#006ACB]'}`} />
-                                
-                                {isAccountMenuOpen && (
-                                    <div className="absolute right-0 mt-4 w-72 bg-white rounded-[24px] shadow-[0_20px_50px_rgba(0,52,101,0.15)] border border-gray-100 py-6 z-[1100] animate-in fade-in slide-in-from-top-3 duration-200">
-                                        <div className="px-8 pb-4 border-b border-gray-50 flex flex-col items-center text-center">
-                                            <p className="text-[#006ACB] text-[10px] font-black uppercase tracking-[0.2em] mb-4">Conta AcadeMe</p>
-                                            <Avatar name={currentUser.name} image={currentUser.profileImage} size="lg" className="border-4 border-blue-50 p-0.5 mb-3" />
-                                            <p className="text-[#003465] font-black text-lg tracking-tighter leading-tight truncate w-full">{currentUser.name}</p>
-                                            <p className="text-gray-400 text-xs truncate w-full">{currentUser.email}</p>
-                                        </div>
-                                        <div className="pt-4 px-2 text-left">
-                                            <button 
-                                                onClick={() => navigate(currentUser?.role === 'professor' ? '/professor-profile' : '/Profile')} 
-                                                className="w-full flex items-center gap-4 px-6 py-3 text-sm font-bold text-gray-600 hover:bg-blue-50 hover:text-[#006ACB] rounded-xl transition-all group"
-                                            >
-                                                Meu Perfil
-                                            </button>
-                                            <div className="my-2 border-t border-gray-50 mx-4" />
-                                            <button onClick={handleLogout} className="w-full flex items-center gap-4 px-6 py-3 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all">Sair da conta</button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="flex gap-4">
-                                <Button shape="pill" size="sm" className="text-xs font-bold px-6" onClick={() => navigate('/login')}>Login</Button>
-                                <Button shape="pill" size="sm" className="text-xs font-bold px-6" onClick={() => navigate('/signup')}>Cadastre-se</Button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </header>
+                }
+            />
 
             <div className="flex flex-col md:flex-row flex-grow">
                 
@@ -278,18 +200,17 @@ const StudentProfileView: React.FC = () => {
                                         tags={proj.tags || ["AcadeMe"]}
                                         date={new Date(proj.createdAt).toLocaleDateString()}
                                         imageUrl={proj.imageUrl || logoBlockchain}
+                                        isValidated={isProjectValidated(proj)}
                                         onView={(id) => navigate(`/project/${id}`)}
                                     />
                                 ))
                             ) : (
-                                <div className="flex flex-col items-center justify-center py-32 opacity-30 border-2 border-dashed border-gray-300 rounded-[32px] bg-white/50 text-center">
-                                    <div className="p-6 bg-white rounded-full shadow-sm mb-6">
-                                        <Icon iconCenter="search" className="w-16 h-16 text-gray-400" />
-                                    </div>
-                                    <p className="italic font-bold text-[#003465] text-lg uppercase tracking-tighter">
-                                        Nenhum projeto publicado ainda.
-                                    </p>
-                                </div>
+                                <EmptyState
+                                    title="Nenhum projeto publicado"
+                                    description="Os trabalhos publicados por este estudante aparecerão aqui."
+                                    icon="search"
+                                    className="py-24"
+                                />
                             )}
                         </div>
                     </div>

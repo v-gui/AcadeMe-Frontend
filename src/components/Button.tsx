@@ -19,7 +19,7 @@ const iconMap = {
 };
 
 const buttonVariants = cva(
-  "h-42 px-4 py-2 flex items-center bg-[#006ACB] text-[#F0F2F5] hover:opacity-85",
+  "h-42 px-4 py-2 flex items-center justify-center text-center bg-[#006ACB] text-[#F0F2F5] hover:opacity-85",
   {
     variants: {
       shape: {
