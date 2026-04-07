@@ -17,6 +17,7 @@ interface InviteMenuProps {
     count: number;
     items: InviteMenuItem[];
     onToggle: () => void;
+    onSelect?: (id: string) => void;
     onAccept: (id: string) => void;
     onDecline: (id: string) => void;
 }
@@ -33,6 +34,7 @@ const InviteMenu: React.FC<InviteMenuProps> = ({
     count,
     items,
     onToggle,
+    onSelect,
     onAccept,
     onDecline
 }) => {
@@ -66,22 +68,32 @@ const InviteMenu: React.FC<InviteMenuProps> = ({
                         {items.length > 0 ? (
                             items.map((item) => (
                                 <div key={item.id} className="p-4 border-b border-gray-50 last:border-none flex flex-col gap-3">
-                                    <div className="flex items-center gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => onSelect?.(item.id)}
+                                        className="flex items-center gap-3 rounded-2xl p-2 -m-2 text-left transition hover:bg-blue-50/70"
+                                    >
                                         <Avatar name={item.avatarName} image={item.avatarImage} size="sm" />
                                         <div className="flex flex-col min-w-0">
                                             <span className="text-xs font-bold text-[#003465] truncate">{item.title}</span>
                                             <span className="text-[10px] text-gray-400 font-medium truncate">{item.subtitle}</span>
                                         </div>
-                                    </div>
+                                    </button>
                                     <div className="flex gap-2">
                                         <button
-                                            onClick={() => onAccept(item.id)}
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                onAccept(item.id);
+                                            }}
                                             className="flex-1 bg-blue-600 text-white py-1.5 rounded-lg text-[10px] font-bold uppercase hover:bg-blue-700 transition"
                                         >
                                             Aceitar
                                         </button>
                                         <button
-                                            onClick={() => onDecline(item.id)}
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                onDecline(item.id);
+                                            }}
                                             className="px-3 bg-red-100 text-red-500 py-1.5 rounded-lg text-[10px] font-bold uppercase hover:bg-red-200 transition"
                                             aria-label={`Recusar convite para ${item.title}`}
                                         >

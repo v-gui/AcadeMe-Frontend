@@ -1,6 +1,5 @@
 ﻿/* eslint-disable jsx-a11y/alt-text */
 import React, { useRef, useEffect, useState } from 'react';
-import coloredLogo from '../assets/colored-logo.svg'; 
 import logoBlockchain from '../assets/logoBlockchain.svg'; 
 import { useNavigate } from 'react-router-dom';
 import { TextBar } from '../components/TextBar';
@@ -8,12 +7,11 @@ import { Icon } from '../components/Icon';
 import { toast } from 'react-toastify';
 import Avatar from '../components/Avatar';
 import ProjectCard from '../components/ProjectCard';
-import ValidatedBadge from '../components/ValidatedBadge';
-import InviteMenu from '../components/InviteMenu';
 import AppHeader from '../components/AppHeader';
 import EmptyState from '../components/EmptyState';
 import { ProfessorSummary, ProjectRecord, SearchResults } from '../types/models';
-import { isProjectValidated } from '../utils/project';
+import { getProjectNavigationPath, isProjectValidated } from '../utils/project';
+import useInviteMenu from '../hooks/useInviteMenu';
 
 const EXPERTISE_OPTIONS = [
     "Engenharia de Software", "Banco de Dados", "Redes de Computadores", 
@@ -24,12 +22,10 @@ const EXPERTISE_OPTIONS = [
 const ProfileProf: React.FC = () => {
     const fileInputRef = useRef<HTMLInputElement>(null); 
     const menuRef = useRef<HTMLDivElement>(null); 
-    const inviteMenuRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
     
     const [user, setUser] = useState<ProfessorSummary | null>(null);
     const [endorsedProjects, setEndorsedProjects] = useState<ProjectRecord[]>([]); 
-    const [invites, setInvites] = useState<ProjectRecord[]>([]);
     
     const [isEditingBio, setIsEditingBio] = useState(false);
     const [tempBio, setTempBio] = useState("");
@@ -40,20 +36,26 @@ const ProfileProf: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState(""); 
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
     const [searchResultStudents, setSearchResultStudents] = useState<SearchResults['students']>([]);
+    const [searchResultProfessors, setSearchResultProfessors] = useState<SearchResults['professors']>([]);
     const [searchResultProjects, setSearchResultProjects] = useState<SearchResults['projects']>([]);
 
     const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false); 
-    const [isInviteMenuOpen, setIsInviteMenuOpen] = useState(false);
 
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+
+    const { inviteMenu } = useInviteMenu(user, {
+        onSelect: (projectId) => {
+            navigate(`/project/${projectId}`);
+        },
+        onAccepted: async (projectId) => {
+            navigate(`/project/${projectId}`);
+        }
+    });
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
                 setIsAccountMenuOpen(false);
-            }
-            if (inviteMenuRef.current && !inviteMenuRef.current.contains(event.target as Node)) {
-                setIsInviteMenuOpen(false);
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
@@ -92,17 +94,12 @@ const ProfileProf: React.FC = () => {
             .then(res => res.json())
             .then((data: ProjectRecord[]) => setEndorsedProjects(data))
             .catch(() => console.error("Erro ao carregar projetos chancelados."));
-
-        fetch(`${apiUrl}/professors/${parsedUser._id}/invites`)
-            .then(res => res.json())
-            .then((data: ProjectRecord[]) => setInvites(data))
-            .catch(() => console.error("Erro ao carregar convites de validação."));
-
     }, [navigate, apiUrl]);
 
     useEffect(() => {
         if (!searchTerm.trim()) {
             setSearchResultStudents([]);
+            setSearchResultProfessors([]);
             setSearchResultProjects([]);
             return;
         }
@@ -112,6 +109,7 @@ const ProfileProf: React.FC = () => {
                 .then(res => res.json())
                 .then((data: SearchResults) => {
                     setSearchResultStudents(data.students || []);
+                    setSearchResultProfessors(data.professors || []);
                     setSearchResultProjects(data.projects || []);
                 })
                 .catch(err => console.error("Erro na busca global:", err));
@@ -178,40 +176,6 @@ const ProfileProf: React.FC = () => {
         }
     };
 
-    const handleRespondInvite = async (projectId: string, status: 'accepted' | 'declined') => {
-        if (!user) return;
-
-        try {
-            const response = await fetch(`${apiUrl}/projects/${projectId}/respond-professor-invite`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ professorId: user._id, status })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                setInvites(prev => prev.filter((invite) => invite._id !== projectId));
-                toast.success(status === 'accepted' ? 'Convite aceito. Você já pode validar o projeto.' : 'Convite recusado.');
-                if (status === 'accepted') {
-                    navigate(`/project/${projectId}`);
-                }
-            } else {
-                toast.error(data.error || 'Não foi possível responder ao convite.');
-            }
-        } catch (err) {
-            toast.error('Erro de conexão.');
-        }
-    };
-
-    const inviteMenuItems = invites.map((invite) => ({
-        id: invite._id,
-        title: invite.title,
-        subtitle: 'Convite para validação docente',
-        avatarName: invite.title || 'P',
-        avatarImage: invite.imageUrl
-    }));
-
     if (!user) return <div className="flex h-screen items-center justify-center font-bold text-[#003465]">Carregando Painel Docente...</div>;
 
     return (
@@ -221,6 +185,7 @@ const ProfileProf: React.FC = () => {
                 searchTerm={searchTerm}
                 isDropdownVisible={isDropdownVisible}
                 searchResultStudents={searchResultStudents}
+                searchResultProfessors={searchResultProfessors}
                 searchResultProjects={searchResultProjects}
                 onSearchChange={(value) => {
                     setSearchTerm(value);
@@ -228,7 +193,7 @@ const ProfileProf: React.FC = () => {
                 }}
                 onSearchBlur={() => setTimeout(() => setIsDropdownVisible(false), 200)}
                 onStudentSelect={(studentId) => navigate(`/student/${studentId}`)}
-                onProjectSelect={(projectId) => navigate(`/project/${projectId}`)}
+                onProjectSelect={(project) => navigate(getProjectNavigationPath(project, user?._id, user?.role))}
                 currentUser={user}
                 menuRef={menuRef}
                 isAccountMenuOpen={isAccountMenuOpen}
@@ -240,17 +205,7 @@ const ProfileProf: React.FC = () => {
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 onLogout={handleLogout}
-                inviteMenu={{
-                    menuRef: inviteMenuRef,
-                    title: 'Convites de Validação',
-                    emptyMessage: 'Nenhuma nova notificação',
-                    isOpen: isInviteMenuOpen,
-                    count: invites.length,
-                    items: inviteMenuItems,
-                    onToggle: () => setIsInviteMenuOpen(!isInviteMenuOpen),
-                    onAccept: (projectId) => handleRespondInvite(projectId, 'accepted'),
-                    onDecline: (projectId) => handleRespondInvite(projectId, 'declined')
-                }}
+                inviteMenu={inviteMenu}
             />
             
             <div className="profile-section flex flex-col md:flex-row flex-grow">
@@ -361,7 +316,7 @@ const ProfileProf: React.FC = () => {
                                     date={new Date(proj.createdAt || Date.now()).toLocaleDateString()}
                                     imageUrl={proj.imageUrl || logoBlockchain} 
                                     isValidated={isProjectValidated(proj)}
-                                    onView={(id) => navigate(`/project/${id}`)}
+                                    onView={() => navigate(getProjectNavigationPath(proj, user?._id, user?.role))}
                                 />
                             ))}
                         </div>

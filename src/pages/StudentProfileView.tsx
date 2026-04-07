@@ -12,7 +12,9 @@ import Avatar from '../components/Avatar';
 import ValidatedBadge from '../components/ValidatedBadge';
 import AppHeader from '../components/AppHeader';
 import EmptyState from '../components/EmptyState';
-import { isProjectValidated } from '../utils/project';
+import { SearchResults } from '../types/models';
+import { getProjectNavigationPath, isProjectValidated } from '../utils/project';
+import useInviteMenu from '../hooks/useInviteMenu';
 
 interface Aluno {
     _id: string;
@@ -34,12 +36,18 @@ const StudentProfileView: React.FC = () => {
     // --- ESTADOS DA BUSCA GLOBAL (HEADER) ---
     const [searchTerm, setSearchTerm] = useState("");
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
-    const [searchResultStudents, setSearchResultStudents] = useState<any[]>([]);
-    const [searchResultProjects, setSearchResultProjects] = useState<any[]>([]);
+    const [searchResultStudents, setSearchResultStudents] = useState<SearchResults['students']>([]);
+    const [searchResultProfessors, setSearchResultProfessors] = useState<SearchResults['professors']>([]);
+    const [searchResultProjects, setSearchResultProjects] = useState<SearchResults['projects']>([]);
     
     const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
 
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+    const { inviteMenu } = useInviteMenu(currentUser, {
+        onSelect: (projectId) => {
+            navigate(`/project/${projectId}`);
+        }
+    });
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -71,6 +79,7 @@ const StudentProfileView: React.FC = () => {
     useEffect(() => {
         if (!searchTerm.trim()) {
             setSearchResultStudents([]);
+            setSearchResultProfessors([]);
             setSearchResultProjects([]);
             return;
         }
@@ -78,8 +87,9 @@ const StudentProfileView: React.FC = () => {
         const delayDebounceFn = setTimeout(() => {
             fetch(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`)
                 .then(res => res.json())
-                .then(data => {
+                .then((data: SearchResults) => {
                     setSearchResultStudents(data.students || []);
+                    setSearchResultProfessors(data.professors || []);
                     setSearchResultProjects(data.projects || []);
                 })
                 .catch(err => console.error("Erro na busca:", err));
@@ -104,6 +114,7 @@ const StudentProfileView: React.FC = () => {
                 searchTerm={searchTerm}
                 isDropdownVisible={isDropdownVisible}
                 searchResultStudents={searchResultStudents}
+                searchResultProfessors={searchResultProfessors}
                 searchResultProjects={searchResultProjects}
                 onSearchChange={(value) => {
                     setSearchTerm(value);
@@ -111,7 +122,7 @@ const StudentProfileView: React.FC = () => {
                 }}
                 onSearchBlur={() => setTimeout(() => setIsDropdownVisible(false), 200)}
                 onStudentSelect={(studentId) => navigate(`/student/${studentId}`)}
-                onProjectSelect={(projectId) => navigate(`/project/${projectId}`)}
+                onProjectSelect={(project) => navigate(getProjectNavigationPath(project, currentUser?._id, currentUser?.role))}
                 currentUser={currentUser}
                 menuRef={menuRef}
                 isAccountMenuOpen={isAccountMenuOpen}
@@ -119,6 +130,7 @@ const StudentProfileView: React.FC = () => {
                 onNavigateHome={() => navigate('/')}
                 onNavigateProfile={() => navigate(currentUser?.role === 'professor' ? '/professor-profile' : '/profile')}
                 onLogout={handleLogout}
+                inviteMenu={inviteMenu}
                 unauthenticatedActions={
                     <div className="flex gap-4">
                         <Button shape="pill" size="sm" className="text-xs font-bold px-6" onClick={() => navigate('/login')}>Login</Button>
@@ -201,7 +213,7 @@ const StudentProfileView: React.FC = () => {
                                         date={new Date(proj.createdAt).toLocaleDateString()}
                                         imageUrl={proj.imageUrl || logoBlockchain}
                                         isValidated={isProjectValidated(proj)}
-                                        onView={(id) => navigate(`/project/${id}`)}
+                                        onView={() => navigate(getProjectNavigationPath(proj, currentUser?._id, currentUser?.role))}
                                     />
                                 ))
                             ) : (

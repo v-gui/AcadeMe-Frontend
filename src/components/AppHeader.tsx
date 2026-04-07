@@ -5,7 +5,7 @@ import Avatar from './Avatar';
 import InviteMenu from './InviteMenu';
 import SearchResultsDropdown from './SearchResultsDropdown';
 import coloredLogo from '../assets/colored-logo.svg';
-import { ProjectRecord, SearchResults, StudentSummary } from '../types/models';
+import { ProjectRecord, SearchResults } from '../types/models';
 
 interface HeaderUser {
   name?: string;
@@ -28,6 +28,7 @@ interface InviteMenuConfig {
     avatarImage?: string;
   }>;
   onToggle: () => void;
+  onSelect?: (id: string) => void;
   onAccept: (id: string) => void;
   onDecline: (id: string) => void;
 }
@@ -36,11 +37,13 @@ interface AppHeaderProps {
   searchTerm: string;
   isDropdownVisible: boolean;
   searchResultStudents: SearchResults['students'];
+  searchResultProfessors: SearchResults['professors'];
   searchResultProjects: SearchResults['projects'];
   onSearchChange: (value: string) => void;
   onSearchBlur: () => void;
   onStudentSelect: (studentId: string) => void;
-  onProjectSelect: (projectId: string) => void;
+  onProfessorSelect?: (professorId: string) => void;
+  onProjectSelect: (project: ProjectRecord) => void;
   currentUser?: HeaderUser | null;
   menuRef: React.RefObject<HTMLDivElement>;
   isAccountMenuOpen: boolean;
@@ -56,10 +59,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   searchTerm,
   isDropdownVisible,
   searchResultStudents,
+  searchResultProfessors,
   searchResultProjects,
   onSearchChange,
   onSearchBlur,
   onStudentSelect,
+  onProfessorSelect,
   onProjectSelect,
   currentUser,
   menuRef,
@@ -90,8 +95,10 @@ const AppHeader: React.FC<AppHeaderProps> = ({
           {searchTerm && isDropdownVisible && (
             <SearchResultsDropdown
               students={searchResultStudents}
+              professors={searchResultProfessors}
               projects={searchResultProjects}
               onStudentSelect={onStudentSelect}
+              onProfessorSelect={onProfessorSelect}
               onProjectSelect={onProjectSelect}
             />
           )}

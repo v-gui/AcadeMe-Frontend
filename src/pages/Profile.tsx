@@ -2,19 +2,17 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { Button } from '../components/Button';
 import ProjectCard from '../components/ProjectCard';
-import coloredLogo from '../assets/colored-logo.svg'; 
 import { useNavigate } from 'react-router-dom';
 import logoBlockchain from '../assets/logoBlockchain.svg';
 import { TextBar } from '../components/TextBar';
 import { Icon } from '../components/Icon';
 import { toast } from 'react-toastify';
 import Avatar from '../components/Avatar';
-import ValidatedBadge from '../components/ValidatedBadge';
-import InviteMenu from '../components/InviteMenu';
 import AppHeader from '../components/AppHeader';
 import EmptyState from '../components/EmptyState';
 import { ProjectRecord, SearchResults, StudentSummary } from '../types/models';
-import { getAcceptedStudentSender, isProjectValidated } from '../utils/project';
+import { canDeleteProject, countAcceptedMembers, getProjectNavigationPath, isProjectValidated } from '../utils/project';
+import useInviteMenu from '../hooks/useInviteMenu';
 
 const INTEREST_OPTIONS = [
     "Tecnologia", "Inovação", "Programação", "Python", "React", "Node.js", "Blockchain", 
@@ -29,12 +27,10 @@ const INTEREST_OPTIONS = [
 const Profile: React.FC = () => {
     const fileInputRef = useRef<HTMLInputElement>(null); 
     const menuRef = useRef<HTMLDivElement>(null); 
-    const inviteMenuRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
     
     const [user, setUser] = useState<StudentSummary | null>(null);
     const [projects, setProjects] = useState<ProjectRecord[]>([]);
-    const [invites, setInvites] = useState<ProjectRecord[]>([]); 
 
     // Estados de edição do Perfil
     const [isEditingBio, setIsEditingBio] = useState(false);
@@ -46,17 +42,28 @@ const Profile: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState(""); 
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
     const [searchResultStudents, setSearchResultStudents] = useState<SearchResults['students']>([]);
+    const [searchResultProfessors, setSearchResultProfessors] = useState<SearchResults['professors']>([]);
     const [searchResultProjects, setSearchResultProjects] = useState<SearchResults['projects']>([]);
 
     const [projectSearchTerm, setProjectSearchTerm] = useState(""); 
     const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false); 
-    const [isInviteMenuOpen, setIsInviteMenuOpen] = useState(false);
 
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [idToDelete, setIdToDelete] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+
+    const { inviteMenu } = useInviteMenu(user, {
+        onSelect: (projectId) => {
+            navigate(`/project/${projectId}`);
+        },
+        onAccepted: async () => {
+            if (user?._id) {
+                fetchProjects(user._id);
+            }
+        }
+    });
 
     const fetchProjects = (userId: string) => {
         fetch(`${apiUrl}/students/${userId}/projects`)
@@ -65,18 +72,10 @@ const Profile: React.FC = () => {
             .catch(() => toast.error("Erro ao carregar projetos."));
     };
 
-    const fetchInvites = (userId: string) => {
-        fetch(`${apiUrl}/students/${userId}/invites`)
-            .then(res => res.json())
-            .then((data: ProjectRecord[]) => setInvites(data))
-            .catch(() => console.error("Erro ao buscar convites"));
-    };
-
     // Fecha menus ao clicar fora
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) setIsAccountMenuOpen(false);
-            if (inviteMenuRef.current && !inviteMenuRef.current.contains(event.target as Node)) setIsInviteMenuOpen(false);
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -98,13 +97,13 @@ const Profile: React.FC = () => {
         setTempBio(parsedUser.bio || "");
 
         fetchProjects(parsedUser._id);
-        fetchInvites(parsedUser._id);
     }, [navigate, apiUrl]);
 
     // --- LÓGICA DE BUSCA GLOBAL (HEADER) ---
     useEffect(() => {
         if (!searchTerm.trim()) {
             setSearchResultStudents([]);
+            setSearchResultProfessors([]);
             setSearchResultProjects([]);
             return;
         }
@@ -113,29 +112,13 @@ const Profile: React.FC = () => {
                 .then(res => res.json())
                 .then((data: SearchResults) => {
                     setSearchResultStudents(data.students || []);
+                    setSearchResultProfessors(data.professors || []);
                     setSearchResultProjects(data.projects || []);
                 })
                 .catch(err => console.error("Erro na busca:", err));
         }, 300);
         return () => clearTimeout(delayDebounceFn);
     }, [searchTerm, apiUrl]);
-
-    const handleRespondInvite = async (projectId: string, status: 'accepted' | 'declined') => {
-        if (!user) return;
-        try {
-            const response = await fetch(`${apiUrl}/projects/${projectId}/respond-invite`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ studentId: user._id, status })
-            });
-
-            if (response.ok) {
-                toast.success(status === 'accepted' ? "Equipe atualizada." : "Convite recusado.");
-                setInvites(prev => prev.filter(i => i._id !== projectId));
-                if (status === 'accepted') fetchProjects(user._id);
-            }
-        } catch (err) { toast.error("Erro ao processar convite."); }
-    };
 
     const handleLogout = () => {
         localStorage.removeItem('@AcadeMe:user');
@@ -177,8 +160,13 @@ const Profile: React.FC = () => {
         } catch (err) { toast.error('Erro de conexão.'); }
     };
 
-    const openDeleteModal = (id: string) => {
-        setIdToDelete(id);
+    const openDeleteModal = (project: ProjectRecord) => {
+        if (!canDeleteProject(project)) {
+            toast.warn('Projetos com mais de um membro aceito nao podem ser excluidos. Cada integrante deve sair do projeto ate restar apenas uma pessoa.');
+            return;
+        }
+
+        setIdToDelete(project._id);
         setShowDeleteModal(true);
     };
 
@@ -187,10 +175,14 @@ const Profile: React.FC = () => {
         setIsDeleting(true);
         try {
             const res = await fetch(`${apiUrl}/projects/${idToDelete}`, { method: 'DELETE' });
+            const data = await res.json().catch(() => null);
+
             if (res.ok) {
                 setProjects(projects.filter(p => p._id !== idToDelete));
                 toast.info('Projeto removido.');
                 setShowDeleteModal(false);
+            } else {
+                toast.error(data?.error || 'Nao foi possivel excluir o projeto.');
             }
         } finally {
             setIsDeleting(false);
@@ -208,20 +200,6 @@ const Profile: React.FC = () => {
         if (!user) return;
         handleUpdateProfile({ interests: user.interests.filter(i => i !== interest) }, true);
     };
-
-    const inviteMenuItems = useMemo(() => {
-        return invites.map((invite) => {
-            const sender = getAcceptedStudentSender(invite);
-
-            return {
-                id: invite._id,
-                title: invite.title,
-                subtitle: `Convidado por ${sender?.name.split(' ')[0] || 'equipe'}`,
-                avatarName: sender?.name || 'A',
-                avatarImage: sender?.profileImage
-            };
-        });
-    }, [invites]);
 
     const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -244,11 +222,12 @@ const Profile: React.FC = () => {
                 searchTerm={searchTerm}
                 isDropdownVisible={isDropdownVisible}
                 searchResultStudents={searchResultStudents}
+                searchResultProfessors={searchResultProfessors}
                 searchResultProjects={searchResultProjects}
                 onSearchChange={(value) => { setSearchTerm(value); setIsDropdownVisible(true); }}
                 onSearchBlur={() => setTimeout(() => setIsDropdownVisible(false), 200)}
                 onStudentSelect={(studentId) => navigate(`/student/${studentId}`)}
-                onProjectSelect={(projectId) => navigate(`/project/${projectId}`)}
+                onProjectSelect={(project) => navigate(getProjectNavigationPath(project, user?._id, user?.role))}
                 currentUser={user}
                 menuRef={menuRef}
                 isAccountMenuOpen={isAccountMenuOpen}
@@ -256,17 +235,7 @@ const Profile: React.FC = () => {
                 onNavigateHome={() => navigate('/')}
                 onNavigateProfile={() => navigate('/profile')}
                 onLogout={handleLogout}
-                inviteMenu={{
-                    menuRef: inviteMenuRef,
-                    title: 'Convites de Projeto',
-                    emptyMessage: 'Nenhuma nova notificação',
-                    isOpen: isInviteMenuOpen,
-                    count: invites.length,
-                    items: inviteMenuItems,
-                    onToggle: () => setIsInviteMenuOpen(!isInviteMenuOpen),
-                    onAccept: (projectId) => handleRespondInvite(projectId, 'accepted'),
-                    onDecline: (projectId) => handleRespondInvite(projectId, 'declined')
-                }}
+                inviteMenu={inviteMenu}
             />
 
             {/** --- MODAL DELETAR --- **/}
@@ -378,21 +347,31 @@ const Profile: React.FC = () => {
 
                     <div className="projects-list w-full max-w-none mx-auto space-y-8 pb-20">
                         {filteredProjects.length > 0 ? (
-                            filteredProjects.map((proj) => (
-                                <ProjectCard
-                                    key={proj._id}
-                                    id={proj._id}
-                                    title={proj.title}
-                                    description={proj.description}
-                                    tags={proj.tags || ["AcadeMe"]}
-                                    date={new Date(proj.createdAt || Date.now()).toLocaleDateString()}
-                                    imageUrl={proj.imageUrl || logoBlockchain} 
-                                    isValidated={isProjectValidated(proj)}
-                                    onDelete={() => openDeleteModal(proj._id)}
-                                    onEdit={(id) => navigate(`/upload?edit=${id}`)}
-                                    onView={(id) => navigate(`/project/${id}`)}
-                                />
-                            ))
+                            filteredProjects.map((proj) => {
+                                const acceptedMembersCount = countAcceptedMembers(proj);
+                                const deleteLocked = !canDeleteProject(proj);
+                                const deleteTitle = deleteLocked
+                                    ? `Exclusao bloqueada: ${acceptedMembersCount} membros aceitos na equipe`
+                                    : 'Excluir projeto';
+
+                                return (
+                                    <ProjectCard
+                                        key={proj._id}
+                                        id={proj._id}
+                                        title={proj.title}
+                                        description={proj.description}
+                                        tags={proj.tags || ["AcadeMe"]}
+                                        date={new Date(proj.createdAt || Date.now()).toLocaleDateString()}
+                                        imageUrl={proj.imageUrl || logoBlockchain} 
+                                        isValidated={isProjectValidated(proj)}
+                                        onDelete={() => openDeleteModal(proj)}
+                                        isDeleteDisabled={deleteLocked}
+                                        deleteTitle={deleteTitle}
+                                        onEdit={(id) => navigate(`/upload?edit=${id}`)}
+                                        onView={() => navigate(getProjectNavigationPath(proj, user?._id, user?.role))}
+                                    />
+                                );
+                            })
                         ) : (
                             <EmptyState
                                 title={projectSearchTerm ? 'Sem resultados' : 'Nenhum projeto publicado'}

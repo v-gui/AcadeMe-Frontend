@@ -14,6 +14,8 @@ interface ProjectCardProps {
   onView: (id: string) => void;
   onDelete?: (id: string) => void;
   onEdit?: (id: string) => void;
+  isDeleteDisabled?: boolean;
+  deleteTitle?: string;
 }
 
 const ProjectCard: React.FC<ProjectCardProps> = ({
@@ -26,6 +28,8 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   isValidated = false,
   onDelete,
   onEdit,
+  isDeleteDisabled = false,
+  deleteTitle = 'Excluir projeto',
   onView
 }) => {
   return (
@@ -60,17 +64,31 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
             )}
 
             {onDelete && (
-              <Icon
-                iconCenter="trash"
-                buttonStyle="dark"
-                shape="round"
-                className="w-10 h-10 p-0 flex items-center justify-center bg-[#003465] hover:bg-red-600 border-none shadow-sm active:scale-90"
-                onClick={(e: React.MouseEvent) => {
-                  e.stopPropagation();
-                  onDelete(id);
-                }}
-                title="Excluir projeto"
-              />
+              isDeleteDisabled ? (
+                <Icon
+                  iconCenter="userLock"
+                  buttonStyle="dark"
+                  shape="round"
+                  className="w-10 h-10 p-0 flex items-center justify-center bg-[#003465] hover:bg-[#003465] border-none shadow-sm"
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    onDelete(id);
+                  }}
+                  title={deleteTitle}
+                />
+              ) : (
+                <Icon
+                  iconCenter="trash"
+                  buttonStyle="dark"
+                  shape="round"
+                  className="w-10 h-10 p-0 flex items-center justify-center bg-[#003465] hover:bg-red-600 border-none shadow-sm active:scale-90"
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    onDelete(id);
+                  }}
+                  title={deleteTitle}
+                />
+              )
             )}
           </div>
         </div>

@@ -12,7 +12,9 @@ import Avatar from '../components/Avatar';
 import ValidatedBadge from '../components/ValidatedBadge';
 import AppHeader from '../components/AppHeader';
 import EmptyState from '../components/EmptyState';
-import { isProjectValidated } from '../utils/project';
+import { SearchResults } from '../types/models';
+import { getProjectNavigationPath, isProjectValidated } from '../utils/project';
+import useInviteMenu from '../hooks/useInviteMenu';
 
 interface Aluno {
     _id: string;
@@ -34,15 +36,22 @@ const ProjectView: React.FC = () => {
     // --- ESTADOS DA BUSCA GLOBAL (HEADER) ---
     const [searchTerm, setSearchTerm] = useState("");
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
-    const [searchResultStudents, setSearchResultStudents] = useState<any[]>([]);
-    const [searchResultProjects, setSearchResultProjects] = useState<any[]>([]);
+    const [searchResultStudents, setSearchResultStudents] = useState<SearchResults['students']>([]);
+    const [searchResultProfessors, setSearchResultProfessors] = useState<SearchResults['professors']>([]);
+    const [searchResultProjects, setSearchResultProjects] = useState<SearchResults['projects']>([]);
 
     // Estados da validação docente
     const [endorseComment, setEndorseComment] = useState("");
     const [isEndorsing, setIsEndorsing] = useState(false);
     const [isLeavingTeam, setIsLeavingTeam] = useState(false);
+    const [showLeaveTeamModal, setShowLeaveTeamModal] = useState(false);
 
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+    const { inviteMenu } = useInviteMenu(currentUser, {
+        onSelect: (projectId) => {
+            navigate(`/project/${projectId}`);
+        }
+    });
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -69,6 +78,7 @@ const ProjectView: React.FC = () => {
     useEffect(() => {
         if (!searchTerm.trim()) {
             setSearchResultStudents([]);
+            setSearchResultProfessors([]);
             setSearchResultProjects([]);
             return;
         }
@@ -76,8 +86,9 @@ const ProjectView: React.FC = () => {
         const delayDebounceFn = setTimeout(() => {
             fetch(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`)
                 .then(res => res.json())
-                .then(data => {
+                .then((data: SearchResults) => {
                     setSearchResultStudents(data.students || []);
+                    setSearchResultProfessors(data.professors || []);
                     setSearchResultProjects(data.projects || []);
                 })
                 .catch(err => console.error("Erro na busca:", err));
@@ -146,6 +157,8 @@ const ProjectView: React.FC = () => {
     }, [currentUser, project]);
 
     const canCurrentProfessorEndorse = currentProfessorInvite?.status === 'accepted';
+    const invitedProfessorsCount = project?.invitedProfessors?.length ?? 0;
+    const invitedProfessorsLabel = invitedProfessorsCount > 1 ? 'Docentes Convidados' : 'Docente Convidado';
 
     const isCurrentUserAcceptedMember = useMemo(() => {
         if (!currentUser || currentUser.role !== 'student' || !project?.students) return false;
@@ -158,9 +171,6 @@ const ProjectView: React.FC = () => {
 
     const handleLeaveTeam = async () => {
         if (!currentUser || currentUser.role !== 'student' || !id) return;
-
-        const confirmed = window.confirm("Tem certeza que deseja sair desta equipe?");
-        if (!confirmed) return;
 
         setIsLeavingTeam(true);
 
@@ -175,6 +185,7 @@ const ProjectView: React.FC = () => {
 
             if (response.ok) {
                 toast.success(data.message || 'Você saiu da equipe.');
+                setShowLeaveTeamModal(false);
                 navigate('/profile');
             } else {
                 toast.error(data.error || 'Não foi possível sair da equipe.');
@@ -218,11 +229,12 @@ const ProjectView: React.FC = () => {
                 searchTerm={searchTerm}
                 isDropdownVisible={isDropdownVisible}
                 searchResultStudents={searchResultStudents}
+                searchResultProfessors={searchResultProfessors}
                 searchResultProjects={searchResultProjects}
                 onSearchChange={(value) => { setSearchTerm(value); setIsDropdownVisible(true); }}
                 onSearchBlur={() => setTimeout(() => setIsDropdownVisible(false), 200)}
                 onStudentSelect={(studentId) => navigate(`/student/${studentId}`)}
-                onProjectSelect={(projectId) => navigate(`/project/${projectId}`)}
+                onProjectSelect={(project) => navigate(getProjectNavigationPath(project, currentUser?._id, currentUser?.role))}
                 currentUser={currentUser}
                 menuRef={menuRef}
                 isAccountMenuOpen={isAccountMenuOpen}
@@ -230,6 +242,7 @@ const ProjectView: React.FC = () => {
                 onNavigateHome={() => navigate('/')}
                 onNavigateProfile={() => navigate(currentUser?.role === 'professor' ? '/professor-profile' : '/profile')}
                 onLogout={handleLogout}
+                inviteMenu={inviteMenu}
                 unauthenticatedActions={<Button shape="pill" size="sm" className="text-xs font-bold px-6" onClick={() => navigate('/login')}>Login</Button>}
             />
 
@@ -237,6 +250,36 @@ const ProjectView: React.FC = () => {
             {selectedImage && (
                 <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/95 backdrop-blur-sm cursor-zoom-out p-4 animate-in fade-in duration-300" onClick={() => setSelectedImage(null)}>
                     <img src={selectedImage} className="max-w-full max-h-full rounded-lg shadow-2xl animate-in zoom-in duration-300" />
+                </div>
+            )}
+
+            {showLeaveTeamModal && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl p-10 max-w-sm w-[90%] shadow-2xl flex flex-col items-center text-center border border-gray-100">
+                        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6">
+                            <Icon iconCenter="userLock" className="w-8 h-8" />
+                        </div>
+                        <h3 className="text-2xl font-black text-[#003465] uppercase tracking-tighter">Sair Da Equipe?</h3>
+                        <p className="text-gray-500 text-sm my-4 font-medium">
+                            Você perderá o vínculo com este projeto e voltará para o seu perfil.
+                        </p>
+                        <div className="flex flex-col w-full gap-3 mt-4">
+                            <Button
+                                onClick={handleLeaveTeam}
+                                disabled={isLeavingTeam}
+                                className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-full shadow-lg shadow-red-100"
+                            >
+                                {isLeavingTeam ? "Saindo..." : "Sim, Sair"}
+                            </Button>
+                            <button
+                                onClick={() => setShowLeaveTeamModal(false)}
+                                disabled={isLeavingTeam}
+                                className="text-gray-400 font-bold py-2 text-xs uppercase tracking-widest hover:text-gray-600 transition-colors disabled:opacity-60"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -297,7 +340,7 @@ const ProjectView: React.FC = () => {
                             </div>
                             {project.invitedProfessors?.length > 0 && (
                                 <div className="border-t border-white/[0.05] pt-3 flex flex-col gap-2.5">
-                                    <h4 className="text-amber-100 text-[10px] font-black uppercase tracking-widest">Docente Convidado</h4>
+                                    <h4 className="text-amber-100 text-[10px] font-black uppercase tracking-widest">{invitedProfessorsLabel}</h4>
                                     {project.invitedProfessors.map((invite: any, i: number) => (
                                         <div key={`prof-${i}`} className="flex items-center gap-2.5 bg-amber-500/10 p-2.5 rounded-lg border border-amber-300/10">
                                             <Avatar name={invite.professor?.name} image={invite.professor?.profileImage} size="sm" className="border border-amber-200/20" />
@@ -313,7 +356,7 @@ const ProjectView: React.FC = () => {
                             )}
                             {isCurrentUserAcceptedMember && (
                                 <button
-                                    onClick={handleLeaveTeam}
+                                    onClick={() => setShowLeaveTeamModal(true)}
                                     disabled={isLeavingTeam}
                                     className="w-full mt-1 rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-red-200 transition-all hover:bg-red-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
                                 >

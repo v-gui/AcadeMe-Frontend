@@ -7,6 +7,7 @@ import {
   FaCheck as check,
   FaSearch as search,
   FaPlus as add,
+  FaUserLock as userLock,
   FaPencilAlt as edit, // Ícone de Lápis para Editar
   FaTrashAlt as trash,  // Ícone de Lixeira para Excluir
   FaSave as save       // Ícone de Disco para Salvar (opcional)
@@ -19,6 +20,7 @@ const iconMap = {
   check,
   search,
   add,
+  userLock,
   edit,
   trash,
   save

@@ -17,7 +17,10 @@ import { Icon } from '../components/Icon';
 import { toast } from 'react-toastify';
 import Avatar from '../components/Avatar';
 import ValidatedBadge from '../components/ValidatedBadge';
-import { isProjectValidated } from '../utils/project';
+import { SearchResults } from '../types/models';
+import { getProjectNavigationPath, isProjectValidated } from '../utils/project';
+import InviteMenu from '../components/InviteMenu';
+import useInviteMenu from '../hooks/useInviteMenu';
 
 interface Aluno {
     _id: string;
@@ -39,13 +42,19 @@ const Home: React.FC = () => {
     // --- ESTADOS DA BUSCA GLOBAL (DROPDOWN) ---
     const [searchTerm, setSearchTerm] = useState("");
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
-    const [searchResultStudents, setSearchResultStudents] = useState<any[]>([]);
-    const [searchResultProjects, setSearchResultProjects] = useState<any[]>([]);
+    const [searchResultStudents, setSearchResultStudents] = useState<SearchResults['students']>([]);
+    const [searchResultProfessors, setSearchResultProfessors] = useState<SearchResults['professors']>([]);
+    const [searchResultProjects, setSearchResultProjects] = useState<SearchResults['projects']>([]);
     
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
 
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+    const { inviteMenu } = useInviteMenu(currentUser, {
+        onSelect: (projectId) => {
+            navigate(`/project/${projectId}`);
+        }
+    });
 
     // Carregamento Inicial
     useEffect(() => {
@@ -75,6 +84,7 @@ const Home: React.FC = () => {
     useEffect(() => {
         if (!searchTerm.trim()) {
             setSearchResultStudents([]);
+            setSearchResultProfessors([]);
             setSearchResultProjects([]);
             return;
         }
@@ -82,8 +92,9 @@ const Home: React.FC = () => {
         const delayDebounceFn = setTimeout(() => {
             fetch(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`)
                 .then(res => res.json())
-                .then(data => {
+                .then((data: SearchResults) => {
                     setSearchResultStudents(data.students || []);
+                    setSearchResultProfessors(data.professors || []);
                     setSearchResultProjects(data.projects || []);
                 })
                 .catch(err => console.error("Erro na busca global:", err));
@@ -151,6 +162,27 @@ const Home: React.FC = () => {
                                     </div>
                                 )}
 
+                                {searchResultProfessors.length > 0 && (
+                                    <div>
+                                        <div className="bg-blue-50 px-5 py-3 border-y border-blue-200">
+                                            <span className="text-[10px] font-black text-[#006ACB] uppercase tracking-[0.2em] flex items-center gap-2"> Professores </span>
+                                        </div>
+                                        {searchResultProfessors.map(professor => (
+                                            <div key={professor._id} className="flex items-center gap-4 p-4 border-b border-gray-50 last:border-none group">
+                                                <Avatar name={professor.name} image={professor.profileImage} size="sm" className="shadow-sm" />
+                                                <div className="flex flex-col flex-1">
+                                                    <span className="font-bold text-[#003465] text-xs">
+                                                        {professor.academicTitle ? `${professor.academicTitle} ${professor.name}` : professor.name}
+                                                    </span>
+                                                    <span className="text-gray-400 text-[9px] uppercase font-black tracking-wider mt-0.5">
+                                                        {professor.department || 'Docente'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
                                 {/** CATEGORIA: PROJETOS (VERDE) **/}
                                 {searchResultProjects.length > 0 && (
                                     <div>
@@ -159,7 +191,7 @@ const Home: React.FC = () => {
                                             
                                         </div>
                                         {searchResultProjects.map(proj => (
-                                            <div key={proj._id} onClick={() => navigate(`/project/${proj._id}`)} className="flex items-center gap-4 p-4 hover:bg-green-50/50 cursor-pointer border-b border-gray-50 last:border-none group">
+                                            <div key={proj._id} onClick={() => navigate(getProjectNavigationPath(proj, currentUser?._id, currentUser?.role))} className="flex items-center gap-4 p-4 hover:bg-green-50/50 cursor-pointer border-b border-gray-50 last:border-none group">
                                                 <div className="flex flex-col flex-1 overflow-hidden">
                                                     <div className="font-bold text-[#003465] text-xs group-hover:text-[#006ACB] transition-colors flex items-center gap-2">
                                                         <span className="truncate">{proj.title}</span>
@@ -174,7 +206,7 @@ const Home: React.FC = () => {
                                     </div>
                                 )}
 
-                                {searchResultStudents.length === 0 && searchResultProjects.length === 0 && (
+                                {searchResultStudents.length === 0 && searchResultProfessors.length === 0 && searchResultProjects.length === 0 && (
                                     <div className="p-10 text-center flex flex-col items-center justify-center opacity-50">
                                         <Icon iconCenter="search" className="w-8 h-8 mb-3 text-[#003465]" />
                                         <p className="text-[#003465] font-black text-xs uppercase tracking-widest">Nenhum resultado</p>
@@ -184,7 +216,10 @@ const Home: React.FC = () => {
                         )}
                     </div>
 
-                    <div className="flex-shrink-0 relative" ref={menuRef}>
+                    <div className="flex-shrink-0 flex items-center gap-4">
+                        {inviteMenu && <InviteMenu {...inviteMenu} />}
+
+                        <div className="relative" ref={menuRef}>
                         {currentUser ? (
                             <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}>
                                 <div className="hidden md:flex flex-col items-end mr-1">
@@ -219,10 +254,11 @@ const Home: React.FC = () => {
                             </div>
                         ) : (
                                <div className="flex gap-4">
-                                 <Button shape="pill" size="sm" className="text-xs font-bold px-6" onClick={() => navigate('/login')}>Login</Button>
+                                <Button shape="pill" size="sm" className="text-xs font-bold px-6" onClick={() => navigate('/login')}>Login</Button>
                                  <Button shape="pill" size="sm" className="text-xs font-bold px-6" onClick={() => navigate('/signup')}>Cadastre-se</Button>
                                </div>
                         )}
+                        </div>
                     </div>
                 </div>
             </header>
@@ -297,7 +333,7 @@ const Home: React.FC = () => {
                         <ShowcaseProjectCard 
                             key={proj._id} id={proj._id} title={proj.title} description={proj.description} tags={proj.tags || []} 
                             date={new Date(proj.createdAt).toLocaleDateString()} imageUrl={proj.imageUrl || logoBlockchain}
-                            onView={(id) => navigate(`/project/${id}`)}
+                            onView={() => navigate(getProjectNavigationPath(proj, currentUser?._id, currentUser?.role))}
                         />
                     ))}
                 </div>

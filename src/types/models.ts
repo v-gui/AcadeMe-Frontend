@@ -62,5 +62,6 @@ export interface ProjectRecord {
 
 export interface SearchResults {
     students: StudentSummary[];
+    professors: ProfessorSummary[];
     projects: ProjectRecord[];
 }

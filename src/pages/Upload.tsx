@@ -12,7 +12,9 @@ import Avatar from '../components/Avatar';
 import ValidatedBadge from '../components/ValidatedBadge';
 import AppHeader from '../components/AppHeader';
 import EmptyState from '../components/EmptyState';
-import { isProjectValidated } from '../utils/project';
+import { SearchResults } from '../types/models';
+import { getProjectNavigationPath, isProjectValidated } from '../utils/project';
+import useInviteMenu from '../hooks/useInviteMenu';
 
 interface Aluno {
     _id: string;
@@ -85,12 +87,24 @@ const Upload: React.FC = () => {
     const [alunos, setAlunos] = useState<Aluno[]>([]); // Usado para a lista de convites da equipe
     const [searchTerm, setSearchTerm] = useState("");
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
-    const [searchResultStudents, setSearchResultStudents] = useState<any[]>([]);
-    const [searchResultProjects, setSearchResultProjects] = useState<any[]>([]);
+    const [searchResultStudents, setSearchResultStudents] = useState<SearchResults['students']>([]);
+    const [searchResultProfessors, setSearchResultProfessors] = useState<SearchResults['professors']>([]);
+    const [searchResultProjects, setSearchResultProjects] = useState<SearchResults['projects']>([]);
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+    const [isLeavingTeam, setIsLeavingTeam] = useState(false);
+    const [showLeaveTeamModal, setShowLeaveTeamModal] = useState(false);
 
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+    const { inviteMenu } = useInviteMenu(currentUser, {
+        onSelect: (projectId) => {
+            navigate(`/project/${projectId}`);
+        }
+    });
+    const acceptedCollaboratorsCount = collaborators.filter((collaborator) => collaborator.status === 'accepted').length;
+    const acceptedMembersCount = (userId ? 1 : 0) + acceptedCollaboratorsCount;
+    const invitedProfessorsLabel = invitedProfessors.length > 1 ? 'Docentes Convidados' : 'Docente Convidado';
+    const invitedProfessorsCountLabel = `${invitedProfessors.length} ${invitedProfessors.length === 1 ? 'DOCENTE' : 'DOCENTES'}`;
 
     // Fecha menus ao clicar fora
     useEffect(() => {
@@ -151,14 +165,16 @@ const Upload: React.FC = () => {
     useEffect(() => {
         if (!searchTerm.trim()) {
             setSearchResultStudents([]);
+            setSearchResultProfessors([]);
             setSearchResultProjects([]);
             return;
         }
         const delayDebounceFn = setTimeout(() => {
             fetch(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`)
                 .then(res => res.json())
-                .then(data => {
+                .then((data: SearchResults) => {
                     setSearchResultStudents(data.students || []);
+                    setSearchResultProfessors(data.professors || []);
                     setSearchResultProjects(data.projects || []);
                 })
                 .catch(err => console.error("Erro na busca:", err));
@@ -245,6 +261,45 @@ const Upload: React.FC = () => {
         setTags([...tags, tag]); setTagSearch(""); setIsTagDropdownVisible(false);
     };
 
+    const handleRemoveCollaborator = (collaboratorId?: string, status?: CollaboratorWithStatus['status']) => {
+        if (!collaboratorId) return;
+
+        if (status === 'accepted') {
+            toast.info('Membros aceitos precisam sair do projeto pela propria pagina do projeto.');
+            return;
+        }
+
+        setCollaborators(collaborators.filter((item) => item.student?._id !== collaboratorId));
+    };
+
+    const handleLeaveTeam = async () => {
+        if (!currentUser || currentUser.role !== 'student' || !editId) return;
+
+        setIsLeavingTeam(true);
+
+        try {
+            const response = await fetch(`${apiUrl}/projects/${editId}/leave`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ studentId: currentUser._id })
+            });
+
+            const data = await response.json().catch(() => null);
+
+            if (response.ok) {
+                toast.success(data?.message || 'Voce saiu da equipe.');
+                setShowLeaveTeamModal(false);
+                navigate('/profile');
+            } else {
+                toast.error(data?.error || 'Nao foi possivel sair da equipe.');
+            }
+        } catch (error) {
+            toast.error('Erro de conexao.');
+        } finally {
+            setIsLeavingTeam(false);
+        }
+    };
+
     const handleSaveProject = async () => {
         if (!title.trim() || !description.trim()) {
             toast.warn("Título e descrição são obrigatórios.");
@@ -266,9 +321,13 @@ const Upload: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title, description, imageUrl: imagePreview, students: studentsData, invitedProfessors: invitedProfessorsData, tags, posters, files, references })
             });
+            const data = await response.json().catch(() => null);
+
             if(response.ok) {
                 toast.success("Sucesso!");
                 navigate('/Profile');
+            } else {
+                toast.error(data?.error || 'Nao foi possivel salvar o projeto.');
             }
         } catch (error) { toast.error("Erro de conexão."); } finally { setLoading(false); }
     };
@@ -279,11 +338,12 @@ const Upload: React.FC = () => {
                 searchTerm={searchTerm}
                 isDropdownVisible={isDropdownVisible}
                 searchResultStudents={searchResultStudents}
+                searchResultProfessors={searchResultProfessors}
                 searchResultProjects={searchResultProjects}
                 onSearchChange={(value) => { setSearchTerm(value); setIsDropdownVisible(true); }}
                 onSearchBlur={() => setTimeout(() => setIsDropdownVisible(false), 200)}
                 onStudentSelect={(studentId) => navigate(`/student/${studentId}`)}
-                onProjectSelect={(projectId) => navigate(`/project/${projectId}`)}
+                onProjectSelect={(project) => navigate(getProjectNavigationPath(project, currentUser?._id, currentUser?.role))}
                 currentUser={currentUser}
                 menuRef={menuRef}
                 isAccountMenuOpen={isAccountMenuOpen}
@@ -291,8 +351,39 @@ const Upload: React.FC = () => {
                 onNavigateHome={() => navigate('/')}
                 onNavigateProfile={() => navigate(currentUser?.role === 'professor' ? '/professor-profile' : '/profile')}
                 onLogout={handleLogout}
+                inviteMenu={inviteMenu}
                 unauthenticatedActions={<Button shape="pill" size="sm" className="text-xs font-bold px-6" onClick={() => navigate('/login')}>Login</Button>}
             />
+
+            {showLeaveTeamModal && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl p-10 max-w-sm w-[90%] shadow-2xl flex flex-col items-center text-center border border-gray-100">
+                        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6">
+                            <Icon iconCenter="userLock" className="w-8 h-8" />
+                        </div>
+                        <h3 className="text-2xl font-black text-[#003465] uppercase tracking-tighter">Sair Da Equipe?</h3>
+                        <p className="text-gray-500 text-sm my-4 font-medium">
+                            Você perderá o vínculo com este projeto e voltará para o seu perfil.
+                        </p>
+                        <div className="flex flex-col w-full gap-3 mt-4">
+                            <Button
+                                onClick={handleLeaveTeam}
+                                disabled={isLeavingTeam}
+                                className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-full shadow-lg shadow-red-100"
+                            >
+                                {isLeavingTeam ? "Saindo..." : "Sim, Sair"}
+                            </Button>
+                            <button
+                                onClick={() => setShowLeaveTeamModal(false)}
+                                disabled={isLeavingTeam}
+                                className="text-gray-400 font-bold py-2 text-xs uppercase tracking-widest hover:text-gray-600 transition-colors disabled:opacity-60"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/** --- CONTEÚDO PRINCIPAL (MANTIDO IGUAL) --- **/}
             <div className="w-full px-6 md:px-12 lg:px-20 mt-6 text-left">
@@ -382,6 +473,16 @@ const Upload: React.FC = () => {
                                         <span className="text-blue-400 text-[8px] font-black uppercase">Membro</span>
                                     </div>
                                 </div>
+                                {editId && currentUser?.role === 'student' && (
+                                    <button
+                                        onClick={() => setShowLeaveTeamModal(true)}
+                                        disabled={isLeavingTeam || acceptedMembersCount <= 1}
+                                        className="w-full rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-red-200 transition-all hover:bg-red-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                                        title={acceptedMembersCount <= 1 ? 'O ultimo membro aceito nao pode sair do projeto.' : 'Sair da equipe'}
+                                    >
+                                        {isLeavingTeam ? 'Saindo...' : 'Sair da equipe'}
+                                    </button>
+                                )}
                                 {collaborators.map(c => (
                                     <div key={c.student?._id} className="group flex items-center gap-2.5 p-2 rounded-lg border border-transparent hover:bg-white/5 transition-all">
                                         <Avatar name={c.student?.name} image={c.student?.profileImage} size="sm" className={c.status === 'accepted' ? 'opacity-100' : 'opacity-40'} />
@@ -389,16 +490,22 @@ const Upload: React.FC = () => {
                                             <span className={`font-bold text-[12px] ${c.status === 'accepted' ? 'text-white' : 'text-white/50'}`}>{c.student?.name}</span>
                                             <span className={`text-[8px] font-black uppercase tracking-tighter ${c.status === 'accepted' ? 'text-green-400' : c.status === 'pending' ? 'text-yellow-500' : 'text-red-400'}`}>{c.status === 'accepted' ? 'Membro' : c.status === 'pending' ? 'Pendente' : 'Recusado'}</span>
                                         </div>
-                                        <button onClick={() => setCollaborators(collaborators.filter(i => i.student?._id !== c.student?._id))} className="opacity-0 group-hover:opacity-100 text-red-400 text-xs">X</button>
+                                        <button
+                                            onClick={() => handleRemoveCollaborator(c.student?._id, c.status)}
+                                            className={`text-xs ${c.status === 'accepted' ? 'text-amber-300 opacity-100' : 'text-red-400 opacity-0 group-hover:opacity-100'}`}
+                                            title={c.status === 'accepted' ? 'Membros aceitos precisam sair do projeto pela propria pagina do projeto.' : 'Remover colaborador'}
+                                        >
+                                            {c.status === 'accepted' ? '!' : 'X'}
+                                        </button>
                                     </div>
                                 ))}
                             </div>
 
                             <div className="border-t border-white/[0.05] pt-4 flex flex-col gap-3">
                                 <div className="flex items-center justify-between">
-                                    <h4 className="text-white/80 text-[9px] font-black uppercase tracking-widest">Docente Convidado</h4>
+                                    <h4 className="text-white/80 text-[9px] font-black uppercase tracking-widest">{invitedProfessorsLabel}</h4>
                                     <span className="bg-amber-500/20 text-amber-100 text-[7px] px-2 py-0.5 rounded-full font-black uppercase">
-                                        {invitedProfessors.length} DOCENTE(S)
+                                        {invitedProfessorsCountLabel}
                                     </span>
                                 </div>
                                 <div className="relative">

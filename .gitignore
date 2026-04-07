@@ -38,3 +38,5 @@ yarn-error.log*
 # Arquivos do Sistema Operacional
 .DS_Store
 Thumbs.db
+*.out.log
+*.err.log
