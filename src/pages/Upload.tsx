@@ -403,6 +403,7 @@ const Upload: React.FC = () => {
                 onSearchChange={(value) => { setSearchTerm(value); setIsDropdownVisible(true); }}
                 onSearchBlur={() => setTimeout(() => setIsDropdownVisible(false), 200)}
                 onStudentSelect={(studentId) => navigate(`/student/${studentId}`)}
+                onProfessorSelect={(professorId) => navigate(`/professor/${professorId}`)}
                 onProjectSelect={(project) => navigate(getProjectNavigationPath(project, currentUser?._id, currentUser?.role))}
                 currentUser={currentUser}
                 menuRef={menuRef}
@@ -724,7 +725,7 @@ const Upload: React.FC = () => {
                 </div>
 
                 <div className="flex justify-center gap-6 py-6 pb-20">
-                    <Button onClick={() => navigate(editId ? `/project/${editId}` : '/Profile')} shape="pill" className="font-black text-white border-2 border-gray-200 uppercase text-[10px] tracking-[0.2em] px-12 py-4">Cancelar</Button>
+                    <Button onClick={() => navigate('/profile')} shape="pill" className="font-black text-white border-2 border-gray-200 uppercase text-[10px] tracking-[0.2em] px-12 py-4">Cancelar</Button>
                     <Button className="font-black text-white uppercase text-[10px] tracking-[0.2em] px-16 py-4 shadow-2xl shadow-blue-200" shape="pill" onClick={handleSaveProject} disabled={loading}>
                         {loading ? "..." : editId ? "Salvar" : "Publicar"}
                     </Button>
