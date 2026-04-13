@@ -13,7 +13,7 @@ import ValidatedBadge from '../components/ValidatedBadge';
 import AppHeader from '../components/AppHeader';
 import EmptyState from '../components/EmptyState';
 import { SearchResults } from '../types/models';
-import { getProjectNavigationPath, isProjectValidated } from '../utils/project';
+import { getProjectNavigationPath, isProjectValidated, withViewerQuery } from '../utils/project';
 import useInviteMenu from '../hooks/useInviteMenu';
 
 interface Aluno {
@@ -29,6 +29,7 @@ const ProjectView: React.FC = () => {
     const menuRef = useRef<HTMLDivElement>(null);
     
     const [project, setProject] = useState<any>(null);
+    const [loadError, setLoadError] = useState("");
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
@@ -66,12 +67,23 @@ const ProjectView: React.FC = () => {
     // Carregamento do Projeto e Usuário
     useEffect(() => {
         const savedUser = localStorage.getItem('@AcadeMe:user');
-        if (savedUser) setCurrentUser(JSON.parse(savedUser));
+        const parsedUser = savedUser ? JSON.parse(savedUser) : null;
+        if (parsedUser) setCurrentUser(parsedUser);
 
-        fetch(`${apiUrl}/projects/${id}`)
-            .then(res => res.json())
-            .then(data => setProject(data))
-            .catch(err => console.error("Erro ao carregar projeto:", err));
+        fetch(withViewerQuery(`${apiUrl}/projects/${id}`, parsedUser))
+            .then(async res => {
+                const data = await res.json().catch(() => null);
+                if (!res.ok) throw new Error(data?.error || "Erro ao carregar projeto.");
+                return data;
+            })
+            .then(data => {
+                setProject(data);
+                setLoadError("");
+            })
+            .catch(err => {
+                setLoadError(err.message || "Erro ao carregar projeto.");
+                console.error("Erro ao carregar projeto:", err);
+            });
     }, [id, apiUrl]);
 
     // --- LÓGICA DE BUSCA GLOBAL (HEADER) ---
@@ -84,7 +96,7 @@ const ProjectView: React.FC = () => {
         }
 
         const delayDebounceFn = setTimeout(() => {
-            fetch(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`)
+            fetch(withViewerQuery(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`, currentUser))
                 .then(res => res.json())
                 .then((data: SearchResults) => {
                     setSearchResultStudents(data.students || []);
@@ -95,7 +107,7 @@ const ProjectView: React.FC = () => {
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, apiUrl]);
+    }, [searchTerm, apiUrl, currentUser]);
 
     const handleLogout = () => {
         localStorage.removeItem('@AcadeMe:user');
@@ -169,6 +181,8 @@ const ProjectView: React.FC = () => {
         );
     }, [currentUser, project]);
 
+    const canCurrentUserEditProject = isCurrentUserAcceptedMember;
+
     const handleLeaveTeam = async () => {
         if (!currentUser || currentUser.role !== 'student' || !id) return;
 
@@ -219,6 +233,18 @@ const ProjectView: React.FC = () => {
             toast.error("Erro de conexão com o servidor.");
         }
     };
+
+    if (loadError) {
+        return (
+            <div className="flex h-screen flex-col items-center justify-center gap-4 bg-[#F0F2F5] px-6 text-center">
+                <h1 className="text-2xl font-black uppercase tracking-tighter text-[#003465]">Projeto indisponível</h1>
+                <p className="max-w-md text-sm font-medium text-gray-500">{loadError}</p>
+                <Button onClick={() => navigate('/')} shape="pill" className="font-black text-white uppercase text-[10px] tracking-[0.2em] px-10 py-4 shadow-xl">
+                    Voltar
+                </Button>
+            </div>
+        );
+    }
 
     if (!project) return <div className="flex h-screen items-center justify-center font-bold text-[#003465] animate-pulse uppercase tracking-widest text-[10px]">Carregando projeto...</div>;
 
@@ -536,8 +562,17 @@ const ProjectView: React.FC = () => {
                     </section>
                 </div>
 
-                <div className="flex justify-center pt-10">
+                <div className="flex flex-col md:flex-row justify-center gap-4 pt-10">
                     <Button onClick={() => navigate(-1)} shape="pill" className="font-black text-white uppercase text-[10px] tracking-[0.2em] px-14 py-4 shadow-xl hover:bg-black transition-all">Voltar para Galeria</Button>
+                    {canCurrentUserEditProject && (
+                        <Button
+                            onClick={() => navigate(`/upload?edit=${project._id}`)}
+                            shape="pill"
+                            className="font-black text-white uppercase text-[10px] tracking-[0.2em] px-14 py-4 shadow-xl hover:bg-black transition-all"
+                        >
+                            Editar projeto
+                        </Button>
+                    )}
                 </div>
             </main>
         </div>
