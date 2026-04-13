@@ -18,15 +18,34 @@ export const isAcceptedProjectMember = (
     );
 
 export const getProjectNavigationPath = (
-    project: Pick<ProjectRecord, '_id' | 'students'>,
+    project: Pick<ProjectRecord, '_id'>,
     userId?: string | null,
     role?: string
 ): string => {
-    if (role !== 'professor' && isAcceptedProjectMember(project, userId)) {
-        return `/upload?edit=${project._id}`;
-    }
-
+    void userId;
+    void role;
     return `/project/${project._id}`;
+};
+
+export const getViewerQuery = (currentUser?: { _id?: string; role?: string } | null): string => {
+    if (!currentUser?._id || !currentUser?.role) return '';
+
+    const params = new URLSearchParams({
+        viewerId: currentUser._id,
+        viewerRole: currentUser.role
+    });
+
+    return params.toString();
+};
+
+export const withViewerQuery = (
+    url: string,
+    currentUser?: { _id?: string; role?: string } | null
+): string => {
+    const viewerQuery = getViewerQuery(currentUser);
+    if (!viewerQuery) return url;
+
+    return `${url}${url.includes('?') ? '&' : '?'}${viewerQuery}`;
 };
 
 export const countAcceptedMembers = (project?: Pick<ProjectRecord, 'students'> | null): number =>

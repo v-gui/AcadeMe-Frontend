@@ -11,7 +11,7 @@ import Avatar from '../components/Avatar';
 import AppHeader from '../components/AppHeader';
 import EmptyState from '../components/EmptyState';
 import { ProjectRecord, SearchResults, StudentSummary } from '../types/models';
-import { canDeleteProject, countAcceptedMembers, getProjectNavigationPath, isProjectValidated } from '../utils/project';
+import { canDeleteProject, countAcceptedMembers, getProjectNavigationPath, isProjectValidated, withViewerQuery } from '../utils/project';
 import useInviteMenu from '../hooks/useInviteMenu';
 
 const INTEREST_OPTIONS = [
@@ -60,13 +60,13 @@ const Profile: React.FC = () => {
         },
         onAccepted: async () => {
             if (user?._id) {
-                fetchProjects(user._id);
+                fetchProjects(user._id, user);
             }
         }
     });
 
-    const fetchProjects = (userId: string) => {
-        fetch(`${apiUrl}/students/${userId}/projects`)
+    const fetchProjects = (userId: string, viewer = user) => {
+        fetch(withViewerQuery(`${apiUrl}/students/${userId}/projects`, viewer))
             .then(res => res.json())
             .then((data: ProjectRecord[]) => setProjects(data))
             .catch(() => toast.error("Erro ao carregar projetos."));
@@ -96,7 +96,7 @@ const Profile: React.FC = () => {
         });
         setTempBio(parsedUser.bio || "");
 
-        fetchProjects(parsedUser._id);
+        fetchProjects(parsedUser._id, parsedUser);
     }, [navigate, apiUrl]);
 
     // --- LÓGICA DE BUSCA GLOBAL (HEADER) ---
@@ -108,7 +108,7 @@ const Profile: React.FC = () => {
             return;
         }
         const delayDebounceFn = setTimeout(() => {
-            fetch(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`)
+            fetch(withViewerQuery(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`, user))
                 .then(res => res.json())
                 .then((data: SearchResults) => {
                     setSearchResultStudents(data.students || []);
@@ -118,7 +118,7 @@ const Profile: React.FC = () => {
                 .catch(err => console.error("Erro na busca:", err));
         }, 300);
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, apiUrl]);
+    }, [searchTerm, apiUrl, user]);
 
     const handleLogout = () => {
         localStorage.removeItem('@AcadeMe:user');
@@ -368,7 +368,7 @@ const Profile: React.FC = () => {
                                         isDeleteDisabled={deleteLocked}
                                         deleteTitle={deleteTitle}
                                         onEdit={(id) => navigate(`/upload?edit=${id}`)}
-                                        onView={() => navigate(getProjectNavigationPath(proj, user?._id, user?.role))}
+                                        onView={() => navigate(`/project/${proj._id}`)}
                                     />
                                 );
                             })

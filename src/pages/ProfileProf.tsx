@@ -10,7 +10,7 @@ import ProjectCard from '../components/ProjectCard';
 import AppHeader from '../components/AppHeader';
 import EmptyState from '../components/EmptyState';
 import { ProfessorSummary, ProjectRecord, SearchResults } from '../types/models';
-import { getProjectNavigationPath, isProjectValidated } from '../utils/project';
+import { getProjectNavigationPath, isProjectValidated, withViewerQuery } from '../utils/project';
 import useInviteMenu from '../hooks/useInviteMenu';
 
 const EXPERTISE_OPTIONS = [
@@ -105,7 +105,7 @@ const ProfileProf: React.FC = () => {
         }
 
         const delayDebounceFn = setTimeout(() => {
-            fetch(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`)
+            fetch(withViewerQuery(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`, user))
                 .then(res => res.json())
                 .then((data: SearchResults) => {
                     setSearchResultStudents(data.students || []);
@@ -116,7 +116,7 @@ const ProfileProf: React.FC = () => {
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, apiUrl]);
+    }, [searchTerm, apiUrl, user]);
 
 
     const handleLogout = () => {

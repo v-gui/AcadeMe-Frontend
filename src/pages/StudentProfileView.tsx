@@ -13,7 +13,7 @@ import ValidatedBadge from '../components/ValidatedBadge';
 import AppHeader from '../components/AppHeader';
 import EmptyState from '../components/EmptyState';
 import { SearchResults } from '../types/models';
-import { getProjectNavigationPath, isProjectValidated } from '../utils/project';
+import { getProjectNavigationPath, isProjectValidated, withViewerQuery } from '../utils/project';
 import useInviteMenu from '../hooks/useInviteMenu';
 
 interface Aluno {
@@ -62,14 +62,15 @@ const StudentProfileView: React.FC = () => {
     // Carregamento de dados do Estudante e do Usuário Logado
     useEffect(() => {
         const savedUser = localStorage.getItem('@AcadeMe:user');
-        if (savedUser) setCurrentUser(JSON.parse(savedUser));
+        const parsedUser = savedUser ? JSON.parse(savedUser) : null;
+        if (parsedUser) setCurrentUser(parsedUser);
 
         fetch(`${apiUrl}/students/${id}`)
             .then(res => res.json())
             .then(data => setStudent(data))
             .catch(err => console.error("Erro ao carregar estudante:", err));
 
-        fetch(`${apiUrl}/students/${id}/projects`)
+        fetch(withViewerQuery(`${apiUrl}/students/${id}/projects`, parsedUser))
             .then(res => res.json())
             .then(data => setProjects(data))
             .catch(err => console.error("Erro ao carregar projetos:", err));
@@ -85,7 +86,7 @@ const StudentProfileView: React.FC = () => {
         }
 
         const delayDebounceFn = setTimeout(() => {
-            fetch(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`)
+            fetch(withViewerQuery(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`, currentUser))
                 .then(res => res.json())
                 .then((data: SearchResults) => {
                     setSearchResultStudents(data.students || []);
@@ -96,7 +97,7 @@ const StudentProfileView: React.FC = () => {
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, apiUrl]);
+    }, [searchTerm, apiUrl, currentUser]);
 
     const handleLogout = () => {
         localStorage.removeItem('@AcadeMe:user');

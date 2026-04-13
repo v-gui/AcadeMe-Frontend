@@ -18,7 +18,7 @@ import { toast } from 'react-toastify';
 import Avatar from '../components/Avatar';
 import ValidatedBadge from '../components/ValidatedBadge';
 import { SearchResults } from '../types/models';
-import { getProjectNavigationPath, isProjectValidated } from '../utils/project';
+import { getProjectNavigationPath, isProjectValidated, withViewerQuery } from '../utils/project';
 import InviteMenu from '../components/InviteMenu';
 import useInviteMenu from '../hooks/useInviteMenu';
 
@@ -90,7 +90,7 @@ const Home: React.FC = () => {
         }
 
         const delayDebounceFn = setTimeout(() => {
-            fetch(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`)
+            fetch(withViewerQuery(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`, currentUser))
                 .then(res => res.json())
                 .then((data: SearchResults) => {
                     setSearchResultStudents(data.students || []);
@@ -101,7 +101,7 @@ const Home: React.FC = () => {
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, apiUrl]);
+    }, [searchTerm, apiUrl, currentUser]);
 
     const vitrineAlunos = useMemo(() => {
         if (alunos.length === 0) return [];

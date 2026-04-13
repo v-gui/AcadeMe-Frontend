@@ -13,7 +13,7 @@ import ValidatedBadge from '../components/ValidatedBadge';
 import AppHeader from '../components/AppHeader';
 import EmptyState from '../components/EmptyState';
 import { SearchResults } from '../types/models';
-import { getProjectNavigationPath, isProjectValidated } from '../utils/project';
+import { getProjectNavigationPath, isProjectValidated, withViewerQuery } from '../utils/project';
 import useInviteMenu from '../hooks/useInviteMenu';
 
 interface Aluno {
@@ -94,6 +94,8 @@ const Upload: React.FC = () => {
     const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
     const [isLeavingTeam, setIsLeavingTeam] = useState(false);
     const [showLeaveTeamModal, setShowLeaveTeamModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
     const { inviteMenu } = useInviteMenu(currentUser, {
@@ -102,7 +104,9 @@ const Upload: React.FC = () => {
         }
     });
     const acceptedCollaboratorsCount = collaborators.filter((collaborator) => collaborator.status === 'accepted').length;
-    const acceptedMembersCount = (userId ? 1 : 0) + acceptedCollaboratorsCount;
+    const isCurrentUserStudent = currentUser?.role === 'student';
+    const acceptedMembersCount = (isCurrentUserStudent && userId ? 1 : 0) + acceptedCollaboratorsCount;
+    const canDeleteCurrentProject = Boolean(editId && isCurrentUserStudent && acceptedMembersCount <= 1);
     const invitedProfessorsLabel = invitedProfessors.length > 1 ? 'Docentes Convidados' : 'Docente Convidado';
     const invitedProfessorsCountLabel = `${invitedProfessors.length} ${invitedProfessors.length === 1 ? 'DOCENTE' : 'DOCENTES'}`;
 
@@ -119,8 +123,9 @@ const Upload: React.FC = () => {
     // Carregamento de dados
     useEffect(() => {
         const savedUser = localStorage.getItem('@AcadeMe:user');
+        let parsedUser: any = null;
         if (savedUser) {
-            const parsedUser = JSON.parse(savedUser);
+            parsedUser = JSON.parse(savedUser);
             setUserId(parsedUser._id);
             setCurrentUser(parsedUser);
         } else {
@@ -133,8 +138,18 @@ const Upload: React.FC = () => {
         fetch(`${apiUrl}/professors`).then(res => res.json()).then(data => setProfessors(data || []));
 
         if (editId) {
-            fetch(`${apiUrl}/projects/${editId}`)
-                .then(res => res.json())
+            if (parsedUser.role !== 'student') {
+                toast.error('Apenas alunos da equipe podem editar o projeto.');
+                navigate(`/project/${editId}`);
+                return;
+            }
+
+            fetch(withViewerQuery(`${apiUrl}/projects/${editId}`, parsedUser))
+                .then(async res => {
+                    const data = await res.json().catch(() => null);
+                    if (!res.ok) throw new Error(data?.error || 'Voce nao tem acesso a este projeto.');
+                    return data;
+                })
                 .then(data => {
                     if (!data) return;
                     setTitle(data.title || '');
@@ -145,9 +160,11 @@ const Upload: React.FC = () => {
                     if (data.files) setFiles(data.files);
                     if (data.references) setReferences(data.references);
                     if (data.students) {
-                        const currentUserId = JSON.parse(savedUser)._id;
+                        const savedCurrentUser = JSON.parse(savedUser);
+                        const currentUserId = savedCurrentUser._id;
+                        const shouldHideCurrentStudent = savedCurrentUser.role === 'student';
                         const others = data.students
-                            .filter((s: any) => s.student && s.student._id !== currentUserId)
+                            .filter((s: any) => s.student && (!shouldHideCurrentStudent || s.student._id !== currentUserId))
                             .map((s: any) => ({ student: s.student, status: s.status || 'pending' }));
                         setCollaborators(others);
                     }
@@ -157,6 +174,10 @@ const Upload: React.FC = () => {
                             .map((p: any) => ({ professor: p.professor, status: p.status || 'pending' }));
                         setInvitedProfessors(invited);
                     }
+                })
+                .catch((error) => {
+                    toast.error(error.message || 'Voce nao tem acesso a este projeto.');
+                    navigate('/');
                 });
         }
     }, [editId, navigate, apiUrl]);
@@ -170,7 +191,7 @@ const Upload: React.FC = () => {
             return;
         }
         const delayDebounceFn = setTimeout(() => {
-            fetch(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`)
+            fetch(withViewerQuery(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`, currentUser))
                 .then(res => res.json())
                 .then((data: SearchResults) => {
                     setSearchResultStudents(data.students || []);
@@ -180,7 +201,7 @@ const Upload: React.FC = () => {
                 .catch(err => console.error("Erro na busca:", err));
         }, 300);
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, apiUrl]);
+    }, [searchTerm, apiUrl, currentUser]);
 
     const teamSearchResults = useMemo(() => {
         if (teamSearch.length < 2) return [];
@@ -249,6 +270,13 @@ const Upload: React.FC = () => {
         }
     };
 
+    const handleDownload = (base64: string, name: string) => {
+        const link = document.createElement("a");
+        link.href = base64;
+        link.download = name;
+        link.click();
+    };
+
     const handleAddReference = () => {
         if (refInput.trim()) {
             setReferences([...references, refInput.trim()]);
@@ -300,6 +328,38 @@ const Upload: React.FC = () => {
         }
     };
 
+    const openDeleteModal = () => {
+        if (!canDeleteCurrentProject) {
+            toast.warn('Projetos com mais de um membro aceito nao podem ser excluidos. Cada integrante deve sair do projeto ate restar apenas uma pessoa.');
+            return;
+        }
+
+        setShowDeleteModal(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!editId || !canDeleteCurrentProject) return;
+
+        setIsDeleting(true);
+
+        try {
+            const response = await fetch(`${apiUrl}/projects/${editId}`, { method: 'DELETE' });
+            const data = await response.json().catch(() => null);
+
+            if (response.ok) {
+                toast.info('Projeto removido.');
+                setShowDeleteModal(false);
+                navigate('/profile');
+            } else {
+                toast.error(data?.error || 'Nao foi possivel excluir o projeto.');
+            }
+        } catch (error) {
+            toast.error('Erro de conexao.');
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     const handleSaveProject = async () => {
         if (!title.trim() || !description.trim()) {
             toast.warn("Título e descrição são obrigatórios.");
@@ -307,9 +367,9 @@ const Upload: React.FC = () => {
         }
         setLoading(true);
         const studentsData = [
-            { student: userId, status: 'accepted' },
+            ...(isCurrentUserStudent ? [{ student: userId, status: 'accepted' }] : []),
             ...collaborators.map(c => ({ student: c.student?._id, status: c.status }))
-        ];
+        ].filter((item) => item.student);
         const invitedProfessorsData = invitedProfessors.map((p) => ({
             professor: p.professor?._id,
             status: p.status
@@ -325,7 +385,7 @@ const Upload: React.FC = () => {
 
             if(response.ok) {
                 toast.success("Sucesso!");
-                navigate('/Profile');
+                navigate(editId ? `/project/${editId}` : '/Profile');
             } else {
                 toast.error(data?.error || 'Nao foi possivel salvar o projeto.');
             }
@@ -376,6 +436,36 @@ const Upload: React.FC = () => {
                             <button
                                 onClick={() => setShowLeaveTeamModal(false)}
                                 disabled={isLeavingTeam}
+                                className="text-gray-400 font-bold py-2 text-xs uppercase tracking-widest hover:text-gray-600 transition-colors disabled:opacity-60"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showDeleteModal && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl p-10 max-w-sm w-[90%] shadow-2xl flex flex-col items-center text-center border border-gray-100">
+                        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6">
+                            <Icon iconCenter="trash" className="w-8 h-8" />
+                        </div>
+                        <h3 className="text-2xl font-black text-[#003465] uppercase tracking-tighter">Excluir Projeto?</h3>
+                        <p className="text-gray-500 text-sm my-4 font-medium">
+                            Esta ação não pode ser desfeita e removerá o trabalho do seu portfólio.
+                        </p>
+                        <div className="flex flex-col w-full gap-3 mt-4">
+                            <Button
+                                onClick={confirmDelete}
+                                disabled={isDeleting}
+                                className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-full shadow-lg shadow-red-100"
+                            >
+                                {isDeleting ? "Excluindo..." : "Sim, Excluir"}
+                            </Button>
+                            <button
+                                onClick={() => setShowDeleteModal(false)}
+                                disabled={isDeleting}
                                 className="text-gray-400 font-bold py-2 text-xs uppercase tracking-widest hover:text-gray-600 transition-colors disabled:opacity-60"
                             >
                                 Cancelar
@@ -446,7 +536,7 @@ const Upload: React.FC = () => {
                             <div className="flex items-center justify-between border-b border-white/[0.05] pb-2">
                                 <h3 className="text-white/80 text-[9px] font-black uppercase tracking-widest">Equipe</h3>
                                 <span className="bg-blue-600/40 text-blue-100 text-[7px] px-2 py-0.5 rounded-full font-black uppercase">
-                                    {collaborators.length + 1} MEMBROS
+                                    {collaborators.length + (isCurrentUserStudent ? 1 : 0)} MEMBROS
                                 </span>
                             </div>
                             <div className="relative">
@@ -466,22 +556,14 @@ const Upload: React.FC = () => {
                                 )}
                             </div>
                             <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[280px] custom-scrollbar pr-1">
-                                <div className="flex items-center gap-2.5 bg-white/5 p-2.5 rounded-lg border border-white/5">
-                                    <Avatar name={currentUser?.name} image={currentUser?.profileImage} size="sm" />
-                                    <div className="flex flex-col text-left">
-                                        <span className="text-white font-bold text-[12px]">{currentUser?.name?.split(' ')[0] || "Você"}</span>
-                                        <span className="text-blue-400 text-[8px] font-black uppercase">Membro</span>
+                                {isCurrentUserStudent && (
+                                    <div className="flex items-center gap-2.5 bg-white/5 p-2.5 rounded-lg border border-white/5">
+                                        <Avatar name={currentUser?.name} image={currentUser?.profileImage} size="sm" />
+                                        <div className="flex flex-col text-left">
+                                            <span className="text-white font-bold text-[12px]">{currentUser?.name?.split(' ')[0] || "Você"}</span>
+                                            <span className="text-blue-400 text-[8px] font-black uppercase">Membro</span>
+                                        </div>
                                     </div>
-                                </div>
-                                {editId && currentUser?.role === 'student' && (
-                                    <button
-                                        onClick={() => setShowLeaveTeamModal(true)}
-                                        disabled={isLeavingTeam || acceptedMembersCount <= 1}
-                                        className="w-full rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-red-200 transition-all hover:bg-red-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
-                                        title={acceptedMembersCount <= 1 ? 'O ultimo membro aceito nao pode sair do projeto.' : 'Sair da equipe'}
-                                    >
-                                        {isLeavingTeam ? 'Saindo...' : 'Sair da equipe'}
-                                    </button>
                                 )}
                                 {collaborators.map(c => (
                                     <div key={c.student?._id} className="group flex items-center gap-2.5 p-2 rounded-lg border border-transparent hover:bg-white/5 transition-all">
@@ -552,6 +634,28 @@ const Upload: React.FC = () => {
                                     ))}
                                 </div>
                             </div>
+                            {editId && currentUser?.role === 'student' && (
+                                <div className="flex flex-col gap-2">
+                                    <button
+                                        onClick={() => setShowLeaveTeamModal(true)}
+                                        disabled={isLeavingTeam || acceptedMembersCount <= 1}
+                                        className="w-full mt-1 rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-red-200 transition-all hover:bg-red-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                                        title={acceptedMembersCount <= 1 ? 'O ultimo membro aceito nao pode sair do projeto.' : 'Sair da equipe'}
+                                    >
+                                        {isLeavingTeam ? 'Saindo...' : 'Sair da equipe'}
+                                    </button>
+                                    {canDeleteCurrentProject && (
+                                        <button
+                                            onClick={openDeleteModal}
+                                            disabled={isDeleting}
+                                            className="w-full rounded-xl border border-red-500/30 bg-red-500/20 px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-red-100 transition-all hover:bg-red-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
+                                            title="Excluir projeto"
+                                        >
+                                            {isDeleting ? 'Excluindo...' : 'Excluir projeto'}
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </header>
@@ -588,7 +692,12 @@ const Upload: React.FC = () => {
                             {files.map((file, i) => (
                                 <div key={i} className="flex justify-between items-center p-3 bg-gray-50 rounded-2xl border border-transparent hover:border-blue-100 transition-all group">
                                     <span className="text-blue-900 font-bold text-xs truncate max-w-xs">{file.name}</span>
-                                    <button onClick={() => setFiles(files.filter((_, idx) => idx !== i))} className="text-red-400 font-black text-sm">X</button>
+                                    <div className="flex items-center gap-3">
+                                        {file.base64 && (
+                                            <Button onClick={() => handleDownload(file.base64 as string, file.name)} size="sm" shape="pill" className="text-[9px] px-5 py-2 uppercase font-black shadow-sm">Baixar</Button>
+                                        )}
+                                        <button onClick={() => setFiles(files.filter((_, idx) => idx !== i))} className="text-red-400 font-black text-sm">X</button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -615,7 +724,7 @@ const Upload: React.FC = () => {
                 </div>
 
                 <div className="flex justify-center gap-6 py-6 pb-20">
-                    <Button onClick={() => navigate('/Profile')} shape="pill" className="font-black text-white border-2 border-gray-200 uppercase text-[10px] tracking-[0.2em] px-12 py-4">Cancelar</Button>
+                    <Button onClick={() => navigate(editId ? `/project/${editId}` : '/Profile')} shape="pill" className="font-black text-white border-2 border-gray-200 uppercase text-[10px] tracking-[0.2em] px-12 py-4">Cancelar</Button>
                     <Button className="font-black text-white uppercase text-[10px] tracking-[0.2em] px-16 py-4 shadow-2xl shadow-blue-200" shape="pill" onClick={handleSaveProject} disabled={loading}>
                         {loading ? "..." : editId ? "Salvar" : "Publicar"}
                     </Button>
