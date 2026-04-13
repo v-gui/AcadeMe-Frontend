@@ -11,6 +11,7 @@ import SignUp from './pages/SignUp';
 import Login from './pages/Login';
 import Profile from './pages/Profile';
 import ProfileProf from './pages/ProfileProf';
+import ProfessorProfileView from './pages/ProfessorProfileView';
 import Upload from './pages/Upload';
 import ProjectView from './pages/ProjectView'; 
 import StudentProfileView from './pages/StudentProfileView';
@@ -39,6 +40,7 @@ root.render(
           
           <Route path="/profile" element={<Profile />} />
           <Route path="/professor-profile" element={<ProfileProf />} /> 
+          <Route path="/professor/:id" element={<ProfessorProfileView />} />
           
           <Route path="/upload" element={<Upload />} />
           

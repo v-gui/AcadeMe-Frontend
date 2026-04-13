@@ -260,6 +260,7 @@ const ProjectView: React.FC = () => {
                 onSearchChange={(value) => { setSearchTerm(value); setIsDropdownVisible(true); }}
                 onSearchBlur={() => setTimeout(() => setIsDropdownVisible(false), 200)}
                 onStudentSelect={(studentId) => navigate(`/student/${studentId}`)}
+                onProfessorSelect={(professorId) => navigate(`/professor/${professorId}`)}
                 onProjectSelect={(project) => navigate(getProjectNavigationPath(project, currentUser?._id, currentUser?.role))}
                 currentUser={currentUser}
                 menuRef={menuRef}
@@ -368,10 +369,14 @@ const ProjectView: React.FC = () => {
                                 <div className="border-t border-white/[0.05] pt-3 flex flex-col gap-2.5">
                                     <h4 className="text-amber-100 text-[10px] font-black uppercase tracking-widest">{invitedProfessorsLabel}</h4>
                                     {project.invitedProfessors.map((invite: any, i: number) => (
-                                        <div key={`prof-${i}`} className="flex items-center gap-2.5 bg-amber-500/10 p-2.5 rounded-lg border border-amber-300/10">
+                                        <div
+                                            key={`prof-${i}`}
+                                            onClick={() => invite.professor?._id && navigate(`/professor/${invite.professor._id}`)}
+                                            className="flex items-center gap-2.5 bg-amber-500/10 p-2.5 rounded-lg border border-amber-300/10 hover:bg-amber-500/20 transition-all cursor-pointer group"
+                                        >
                                             <Avatar name={invite.professor?.name} image={invite.professor?.profileImage} size="sm" className="border border-amber-200/20" />
                                             <div className="flex flex-col flex-1">
-                                                <span className="text-white/90 font-bold text-[12px]">{invite.professor?.academicTitle || 'Prof.'} {invite.professor?.name}</span>
+                                                <span className="text-white/90 font-bold text-[12px] group-hover:text-amber-100 transition-colors">{invite.professor?.academicTitle || 'Prof.'} {invite.professor?.name}</span>
                                                 <span className={`text-[8px] font-black uppercase tracking-widest ${invite.status === 'accepted' ? 'text-green-400' : invite.status === 'pending' ? 'text-yellow-400' : 'text-red-400'}`}>
                                                     {invite.status === 'accepted' ? 'Docente Confirmado' : invite.status === 'pending' ? 'Convite Pendente' : 'Convite Recusado'}
                                                 </span>
@@ -465,8 +470,11 @@ const ProjectView: React.FC = () => {
                                         <Avatar name={end.professor?.name || "P"} image={end.professor?.profileImage} size="md" className="shrink-0 border border-gray-200" />
                                         <div className="flex flex-col flex-1 pt-1">
                                             <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-100 w-full">
-                                                <div className="flex flex-col">
-                                                    <p className="text-xs font-black text-[#003465] tracking-tight uppercase">{end.professor?.academicTitle || 'Prof.'} {end.professor?.name}</p>
+                                                <div
+                                                    onClick={() => end.professor?._id && navigate(`/professor/${end.professor._id}`)}
+                                                    className="flex flex-col cursor-pointer group"
+                                                >
+                                                    <p className="text-xs font-black text-[#003465] tracking-tight uppercase group-hover:text-[#006ACB] transition-colors">{end.professor?.academicTitle || 'Prof.'} {end.professor?.name}</p>
                                                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{end.professor?.department || "Docente"}</p>
                                                 </div>
                                                 <span className="text-[8px] bg-green-100 text-green-700 px-3 py-1 rounded-full font-black uppercase tracking-wider">Trabalho Validado</span>

@@ -193,6 +193,7 @@ const ProfileProf: React.FC = () => {
                 }}
                 onSearchBlur={() => setTimeout(() => setIsDropdownVisible(false), 200)}
                 onStudentSelect={(studentId) => navigate(`/student/${studentId}`)}
+                onProfessorSelect={(professorId) => navigate(`/professor/${professorId}`)}
                 onProjectSelect={(project) => navigate(getProjectNavigationPath(project, user?._id, user?.role))}
                 currentUser={user}
                 menuRef={menuRef}

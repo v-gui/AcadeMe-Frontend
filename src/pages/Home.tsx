@@ -168,10 +168,10 @@ const Home: React.FC = () => {
                                             <span className="text-[10px] font-black text-[#006ACB] uppercase tracking-[0.2em] flex items-center gap-2"> Professores </span>
                                         </div>
                                         {searchResultProfessors.map(professor => (
-                                            <div key={professor._id} className="flex items-center gap-4 p-4 border-b border-gray-50 last:border-none group">
+                                            <div key={professor._id} onClick={() => navigate(`/professor/${professor._id}`)} className="flex items-center gap-4 p-4 hover:bg-blue-50/50 cursor-pointer border-b border-gray-50 last:border-none group">
                                                 <Avatar name={professor.name} image={professor.profileImage} size="sm" className="shadow-sm" />
                                                 <div className="flex flex-col flex-1">
-                                                    <span className="font-bold text-[#003465] text-xs">
+                                                    <span className="font-bold text-[#003465] text-xs group-hover:text-[#006ACB] transition-colors">
                                                         {professor.academicTitle ? `${professor.academicTitle} ${professor.name}` : professor.name}
                                                     </span>
                                                     <span className="text-gray-400 text-[9px] uppercase font-black tracking-wider mt-0.5">
