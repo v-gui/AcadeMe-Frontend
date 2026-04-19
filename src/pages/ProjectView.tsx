@@ -13,7 +13,7 @@ import ValidatedBadge from '../components/ValidatedBadge';
 import AppHeader from '../components/AppHeader';
 import EmptyState from '../components/EmptyState';
 import { SearchResults } from '../types/models';
-import { getProjectNavigationPath, isProjectValidated, withViewerQuery } from '../utils/project';
+import { getProjectNavigationPath, isProjectAdmin, isProjectValidated, withViewerQuery } from '../utils/project';
 import useInviteMenu from '../hooks/useInviteMenu';
 
 interface Aluno {
@@ -441,7 +441,9 @@ const ProjectView: React.FC = () => {
                                         <Avatar name={item.student?.name} image={item.student?.profileImage} size="sm" className="border border-white/10" />
                                         <div className="flex flex-col flex-1">
                                             <span className="text-white/90 font-bold text-[12px] group-hover:text-blue-300 transition-colors">{item.student?.name}</span>
-                                            <span className="text-green-400 text-[8px] font-black uppercase tracking-widest">Membro</span>
+                                            <span className="text-green-400 text-[8px] font-black uppercase tracking-widest">
+                                                {isProjectAdmin(project, item.student?._id || item.student) ? 'Admin' : 'Membro'}
+                                            </span>
                                         </div>                                            
                                     </div>
                                 ))}

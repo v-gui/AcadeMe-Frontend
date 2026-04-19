@@ -51,6 +51,7 @@ export interface ProjectRecord {
     description: string;
     imageUrl?: string;
     createdAt?: string;
+    adminStudent?: StudentSummary | string;
     tags?: string[];
     posters?: Array<{ url: string; name: string }>;
     files?: Array<{ name: string; date: string; base64?: string }>;
