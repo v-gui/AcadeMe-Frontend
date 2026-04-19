@@ -11,7 +11,7 @@ import Avatar from '../components/Avatar';
 import AppHeader from '../components/AppHeader';
 import EmptyState from '../components/EmptyState';
 import { ProjectRecord, SearchResults, StudentSummary } from '../types/models';
-import { canDeleteProject, countAcceptedMembers, getProjectNavigationPath, isProjectValidated, withViewerQuery } from '../utils/project';
+import { canDeleteProject, countAcceptedMembers, getProjectNavigationPath, isAcceptedProjectMember, isProjectAdmin, isProjectValidated, withViewerQuery } from '../utils/project';
 import useInviteMenu from '../hooks/useInviteMenu';
 
 const INTEREST_OPTIONS = [
@@ -161,8 +161,12 @@ const Profile: React.FC = () => {
     };
 
     const openDeleteModal = (project: ProjectRecord) => {
-        if (!canDeleteProject(project)) {
-            toast.warn('Projetos com mais de um membro aceito nao podem ser excluidos. Cada integrante deve sair do projeto ate restar apenas uma pessoa.');
+        if (!canDeleteProject(project, user?._id)) {
+            toast.warn(
+                !isProjectAdmin(project, user?._id)
+                    ? 'Apenas o admin do projeto pode excluir o trabalho.'
+                    : 'Projetos com mais de um membro aceito nao podem ser excluidos. Os integrantes devem sair ate restar apenas uma pessoa.'
+            );
             return;
         }
 
@@ -174,7 +178,7 @@ const Profile: React.FC = () => {
         if (!idToDelete) return;
         setIsDeleting(true);
         try {
-            const res = await fetch(`${apiUrl}/projects/${idToDelete}`, { method: 'DELETE' });
+            const res = await fetch(`${apiUrl}/projects/${idToDelete}?requesterStudentId=${user?._id}`, { method: 'DELETE' });
             const data = await res.json().catch(() => null);
 
             if (res.ok) {
@@ -349,10 +353,14 @@ const Profile: React.FC = () => {
                     <div className="projects-list w-full max-w-none mx-auto space-y-8 pb-20">
                         {filteredProjects.length > 0 ? (
                             filteredProjects.map((proj) => {
+                                const isAdmin = canDeleteProject(proj, user?._id);
                                 const acceptedMembersCount = countAcceptedMembers(proj);
-                                const deleteLocked = !canDeleteProject(proj);
+                                const canEdit = isAcceptedProjectMember(proj, user?._id);
+                                const deleteLocked = !isAdmin;
                                 const deleteTitle = deleteLocked
-                                    ? `Exclusao bloqueada: ${acceptedMembersCount} membros aceitos na equipe`
+                                    ? acceptedMembersCount > 1
+                                        ? 'Exclusao bloqueada: ha mais de um membro aceito'
+                                        : 'Exclusao bloqueada: apenas o admin pode excluir'
                                     : 'Excluir projeto';
 
                                 return (
@@ -368,7 +376,7 @@ const Profile: React.FC = () => {
                                         onDelete={() => openDeleteModal(proj)}
                                         isDeleteDisabled={deleteLocked}
                                         deleteTitle={deleteTitle}
-                                        onEdit={(id) => navigate(`/upload?edit=${id}`)}
+                                        onEdit={canEdit ? (id) => navigate(`/upload?edit=${id}`) : undefined}
                                         onView={() => navigate(`/project/${proj._id}`)}
                                     />
                                 );

@@ -13,7 +13,7 @@ import ValidatedBadge from '../components/ValidatedBadge';
 import AppHeader from '../components/AppHeader';
 import EmptyState from '../components/EmptyState';
 import { SearchResults } from '../types/models';
-import { getProjectNavigationPath, isProjectValidated, withViewerQuery } from '../utils/project';
+import { getProjectNavigationPath, isProjectAdmin, isProjectValidated, withViewerQuery } from '../utils/project';
 import useInviteMenu from '../hooks/useInviteMenu';
 
 interface Aluno {
@@ -104,6 +104,7 @@ const Upload: React.FC = () => {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [memberToRemove, setMemberToRemove] = useState<MemberRemovalTarget | null>(null);
+    const [loadedProject, setLoadedProject] = useState<any>(null);
 
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
     const { inviteMenu } = useInviteMenu(currentUser, {
@@ -114,7 +115,8 @@ const Upload: React.FC = () => {
     const acceptedCollaboratorsCount = collaborators.filter((collaborator) => collaborator.status === 'accepted').length;
     const isCurrentUserStudent = currentUser?.role === 'student';
     const acceptedMembersCount = (isCurrentUserStudent && userId ? 1 : 0) + acceptedCollaboratorsCount;
-    const canDeleteCurrentProject = Boolean(editId && isCurrentUserStudent && acceptedMembersCount <= 1);
+    const isCurrentUserAdmin = isProjectAdmin(loadedProject, currentUser?._id);
+    const canDeleteCurrentProject = Boolean(editId && isCurrentUserStudent && isCurrentUserAdmin && acceptedMembersCount <= 1);
     const invitedProfessorsLabel = invitedProfessors.length > 1 ? 'Docentes Convidados' : 'Docente Convidado';
     const invitedProfessorsCountLabel = `${invitedProfessors.length} ${invitedProfessors.length === 1 ? 'DOCENTE' : 'DOCENTES'}`;
 
@@ -160,6 +162,18 @@ const Upload: React.FC = () => {
                 })
                 .then(data => {
                     if (!data) return;
+                    const isAcceptedMember = data.students?.some(
+                        (member: any) =>
+                            member.status === 'accepted' &&
+                            (member.student?._id === parsedUser._id || member.student === parsedUser._id)
+                    );
+
+                    if (!isAcceptedMember) {
+                        toast.error('Apenas membros da equipe podem editar o trabalho.');
+                        navigate(`/project/${editId}`);
+                        return;
+                    }
+                    setLoadedProject(data);
                     setTitle(data.title || '');
                     setDescription(data.description || '');
                     if (data.tags) setTags(data.tags);
@@ -300,8 +314,8 @@ const Upload: React.FC = () => {
     const handleRemoveCollaborator = (collaboratorId?: string, status?: CollaboratorWithStatus['status'], name?: string) => {
         if (!collaboratorId) return;
 
-        if (status === 'accepted') {
-            toast.info('Membros aceitos precisam sair do projeto pela propria pagina do projeto.');
+        if (editId && !isCurrentUserAdmin) {
+            toast.info('Apenas o admin pode remover membros. Voce pode sair do projeto pela pagina do projeto.');
             return;
         }
 
@@ -315,6 +329,11 @@ const Upload: React.FC = () => {
 
     const handleRemoveProfessor = (professorId?: string, name?: string, status?: InvitedProfessorWithStatus['status']) => {
         if (!professorId) return;
+
+        if (editId && !isCurrentUserAdmin) {
+            toast.info('Apenas o admin pode remover docentes do projeto.');
+            return;
+        }
 
         setMemberToRemove({
             type: 'professor',
@@ -368,7 +387,11 @@ const Upload: React.FC = () => {
 
     const openDeleteModal = () => {
         if (!canDeleteCurrentProject) {
-            toast.warn('Projetos com mais de um membro aceito nao podem ser excluidos. Cada integrante deve sair do projeto ate restar apenas uma pessoa.');
+            toast.warn(
+                !isCurrentUserAdmin
+                    ? 'Apenas o admin do projeto pode excluir o trabalho.'
+                    : 'Projetos com mais de um membro aceito nao podem ser excluidos. Os integrantes devem sair ate restar apenas uma pessoa.'
+            );
             return;
         }
 
@@ -381,7 +404,7 @@ const Upload: React.FC = () => {
         setIsDeleting(true);
 
         try {
-            const response = await fetch(`${apiUrl}/projects/${editId}`, { method: 'DELETE' });
+            const response = await fetch(`${apiUrl}/projects/${editId}?requesterStudentId=${currentUser._id}`, { method: 'DELETE' });
             const data = await response.json().catch(() => null);
 
             if (response.ok) {
@@ -417,7 +440,7 @@ const Upload: React.FC = () => {
             const response = await fetch(endpoint, {
                 method: editId ? 'PUT' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title, description, imageUrl: imagePreview, students: studentsData, invitedProfessors: invitedProfessorsData, tags, posters, files, references })
+                body: JSON.stringify({ title, description, imageUrl: imagePreview, students: studentsData, invitedProfessors: invitedProfessorsData, tags, posters, files, references, requesterStudentId: currentUser?._id })
             });
             const data = await response.json().catch(() => null);
 
@@ -632,7 +655,7 @@ const Upload: React.FC = () => {
                                         <Avatar name={currentUser?.name} image={currentUser?.profileImage} size="sm" />
                                         <div className="flex flex-col text-left">
                                             <span className="text-white font-bold text-[12px]">{currentUser?.name?.split(' ')[0] || "Você"}</span>
-                                            <span className="text-blue-400 text-[8px] font-black uppercase">Membro</span>
+                                            <span className="text-blue-400 text-[8px] font-black uppercase">{isCurrentUserAdmin || !editId ? 'Admin' : 'Membro'}</span>
                                         </div>
                                     </div>
                                 )}
@@ -645,10 +668,10 @@ const Upload: React.FC = () => {
                                         </div>
                                         <button
                                             onClick={() => handleRemoveCollaborator(c.student?._id, c.status, c.student?.name)}
-                                            className={`text-xs ${c.status === 'accepted' ? 'text-amber-300 opacity-100' : 'text-red-400 opacity-0 group-hover:opacity-100'}`}
-                                            title={c.status === 'accepted' ? 'Membros aceitos precisam sair do projeto pela propria pagina do projeto.' : 'Remover colaborador'}
+                                            className={`text-xs ${editId && !isCurrentUserAdmin ? 'text-amber-300 opacity-100' : 'text-red-400 opacity-0 group-hover:opacity-100'}`}
+                                            title={editId && !isCurrentUserAdmin ? 'Apenas o admin pode remover membros.' : 'Remover colaborador'}
                                         >
-                                            {c.status === 'accepted' ? '!' : 'X'}
+                                            {editId && !isCurrentUserAdmin ? '!' : 'X'}
                                         </button>
                                     </div>
                                 ))}
