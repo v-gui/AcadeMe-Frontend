@@ -46,6 +46,8 @@ const ProjectView: React.FC = () => {
     const [isEndorsing, setIsEndorsing] = useState(false);
     const [isLeavingTeam, setIsLeavingTeam] = useState(false);
     const [showLeaveTeamModal, setShowLeaveTeamModal] = useState(false);
+    const [isProfessorLeaving, setIsProfessorLeaving] = useState(false);
+    const [showProfessorLeaveModal, setShowProfessorLeaveModal] = useState(false);
 
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
     const { inviteMenu } = useInviteMenu(currentUser, {
@@ -211,6 +213,34 @@ const ProjectView: React.FC = () => {
         }
     };
 
+    const handleProfessorLeave = async (keepEndorsement: boolean) => {
+        if (!currentUser || currentUser.role !== 'professor' || !id) return;
+
+        setIsProfessorLeaving(true);
+
+        try {
+            const response = await fetch(`${apiUrl}/projects/${id}/professor-leave`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ professorId: currentUser._id, keepEndorsement })
+            });
+
+            const data = await response.json().catch(() => null);
+
+            if (response.ok) {
+                toast.success(data?.message || 'Você saiu do projeto.');
+                setProject(data.project);
+                setShowProfessorLeaveModal(false);
+            } else {
+                toast.error(data?.error || 'Não foi possível sair do projeto.');
+            }
+        } catch (err) {
+            toast.error("Erro de conexão com o servidor.");
+        } finally {
+            setIsProfessorLeaving(false);
+        }
+    };
+
     const handleRespondProfessorInvite = async (status: 'accepted' | 'declined') => {
         if (!currentUser || currentUser.role !== 'professor' || !id) return;
 
@@ -310,6 +340,57 @@ const ProjectView: React.FC = () => {
                 </div>
             )}
 
+            {showProfessorLeaveModal && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl p-10 max-w-sm w-[90%] shadow-2xl flex flex-col items-center text-center border border-gray-100">
+                        <div className="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mb-6">
+                            <Icon iconCenter="userLock" className="w-8 h-8" />
+                        </div>
+                        <h3 className="text-2xl font-black text-[#003465] uppercase tracking-tighter">Sair Do Projeto?</h3>
+                        <p className="text-gray-500 text-sm my-4 font-medium">
+                            {hasAlreadyEndorsed
+                                ? 'Você deseja manter sua validação docente neste trabalho?'
+                                : 'Você será removido da lista de docentes convidados deste projeto.'}
+                        </p>
+                        <div className="flex flex-col w-full gap-3 mt-4">
+                            {hasAlreadyEndorsed ? (
+                                <>
+                                    <Button
+                                        onClick={() => handleProfessorLeave(true)}
+                                        disabled={isProfessorLeaving}
+                                        className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-full shadow-lg shadow-green-100"
+                                    >
+                                        {isProfessorLeaving ? "Saindo..." : "Sair e manter validação"}
+                                    </Button>
+                                    <Button
+                                        onClick={() => handleProfessorLeave(false)}
+                                        disabled={isProfessorLeaving}
+                                        className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-full shadow-lg shadow-red-100"
+                                    >
+                                        {isProfessorLeaving ? "Saindo..." : "Sair e remover validação"}
+                                    </Button>
+                                </>
+                            ) : (
+                                <Button
+                                    onClick={() => handleProfessorLeave(false)}
+                                    disabled={isProfessorLeaving}
+                                    className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-full shadow-lg shadow-red-100"
+                                >
+                                    {isProfessorLeaving ? "Saindo..." : "Sim, Sair"}
+                                </Button>
+                            )}
+                            <button
+                                onClick={() => setShowProfessorLeaveModal(false)}
+                                disabled={isProfessorLeaving}
+                                className="text-gray-400 font-bold py-2 text-xs uppercase tracking-widest hover:text-gray-600 transition-colors disabled:opacity-60"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* --- ÁREA PRINCIPAL DO PROJETO --- */}
             <div className="w-full px-6 md:px-12 lg:px-20 mt-6 text-left">
                 <header className="bg-[#003465] text-white p-6 md:p-10 rounded-[40px] shadow-2xl">
@@ -394,6 +475,15 @@ const ProjectView: React.FC = () => {
                                     {isLeavingTeam ? 'Saindo...' : 'Sair da equipe'}
                                 </button>
                             )}
+                            {currentUser?.role === 'professor' && currentProfessorInvite && (
+                                <button
+                                    onClick={() => setShowProfessorLeaveModal(true)}
+                                    disabled={isProfessorLeaving}
+                                    className="w-full mt-1 rounded-xl border border-amber-300/20 bg-amber-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-amber-100 transition-all hover:bg-amber-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                                >
+                                    {isProfessorLeaving ? 'Saindo...' : 'Sair do projeto'}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </header>
@@ -465,6 +555,7 @@ const ProjectView: React.FC = () => {
                         <div className="space-y-5">
                             {project.endorsements.map((end: any, i: number) => {
                                 const isMyEndorsement = currentUser?.role === 'professor' && (end.professor?._id === currentUser._id || end.professor === currentUser._id);
+                                const canEditMyEndorsement = isMyEndorsement && currentProfessorInvite?.status === 'accepted';
                                 return (
                                     <div key={i} className={`flex gap-4 p-5 bg-gray-50 rounded-2xl border ${isMyEndorsement ? 'border-green-200' : 'border-gray-100'} items-start`}>
                                         <Avatar name={end.professor?.name || "P"} image={end.professor?.profileImage} size="md" className="shrink-0 border border-gray-200" />
@@ -479,7 +570,7 @@ const ProjectView: React.FC = () => {
                                                 </div>
                                                 <span className="text-[8px] bg-green-100 text-green-700 px-3 py-1 rounded-full font-black uppercase tracking-wider">Trabalho Validado</span>
                                             </div>
-                                            {isMyEndorsement ? (
+                                            {canEditMyEndorsement ? (
                                                 <div className="flex flex-col gap-3">
                                                     <textarea 
                                                         className="w-full bg-white border border-green-100 rounded-xl p-3 text-xs text-[#006ACB] focus:outline-none focus:border-green-300 font-medium italic min-h-[80px]"
@@ -508,7 +599,14 @@ const ProjectView: React.FC = () => {
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <p className="text-xs text-[#006ACB] font-medium leading-relaxed bg-white p-4 rounded-xl border border-gray-100 shadow-inner italic">"{end.comment}"</p>
+                                                <div className="flex flex-col gap-2">
+                                                    <p className="text-xs text-[#006ACB] font-medium leading-relaxed bg-white p-4 rounded-xl border border-gray-100 shadow-inner italic">"{end.comment}"</p>
+                                                    {isMyEndorsement && (
+                                                        <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">
+                                                            Validação mantida após saída do projeto
+                                                        </span>
+                                                    )}
+                                                </div>
                                             )}
                                         </div>
                                     </div>

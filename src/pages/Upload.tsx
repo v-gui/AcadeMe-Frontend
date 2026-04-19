@@ -42,6 +42,13 @@ interface InvitedProfessorWithStatus {
     status: 'accepted' | 'pending' | 'declined';
 }
 
+interface MemberRemovalTarget {
+    type: 'student' | 'professor';
+    id: string;
+    name: string;
+    status?: 'accepted' | 'pending' | 'declined';
+}
+
 const TAG_OPTIONS = [
     "React", "Node.js", "TypeScript", "Python", "Java", "C#", "C++", "Next.js", 
     "Vue.js", "Angular", "Express", "MongoDB", "PostgreSQL", "Firebase", "AWS", 
@@ -96,6 +103,7 @@ const Upload: React.FC = () => {
     const [showLeaveTeamModal, setShowLeaveTeamModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [memberToRemove, setMemberToRemove] = useState<MemberRemovalTarget | null>(null);
 
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
     const { inviteMenu } = useInviteMenu(currentUser, {
@@ -289,7 +297,7 @@ const Upload: React.FC = () => {
         setTags([...tags, tag]); setTagSearch(""); setIsTagDropdownVisible(false);
     };
 
-    const handleRemoveCollaborator = (collaboratorId?: string, status?: CollaboratorWithStatus['status']) => {
+    const handleRemoveCollaborator = (collaboratorId?: string, status?: CollaboratorWithStatus['status'], name?: string) => {
         if (!collaboratorId) return;
 
         if (status === 'accepted') {
@@ -297,7 +305,37 @@ const Upload: React.FC = () => {
             return;
         }
 
-        setCollaborators(collaborators.filter((item) => item.student?._id !== collaboratorId));
+        setMemberToRemove({
+            type: 'student',
+            id: collaboratorId,
+            name: name || 'este aluno',
+            status
+        });
+    };
+
+    const handleRemoveProfessor = (professorId?: string, name?: string, status?: InvitedProfessorWithStatus['status']) => {
+        if (!professorId) return;
+
+        setMemberToRemove({
+            type: 'professor',
+            id: professorId,
+            name: name || 'este docente',
+            status
+        });
+    };
+
+    const confirmMemberRemoval = () => {
+        if (!memberToRemove) return;
+
+        if (memberToRemove.type === 'student') {
+            setCollaborators(collaborators.filter((item) => item.student?._id !== memberToRemove.id));
+            toast.info('Aluno removido da equipe.');
+        } else {
+            setInvitedProfessors(invitedProfessors.filter((item) => item.professor?._id !== memberToRemove.id));
+            toast.info('Docente removido. Ao salvar, qualquer validação dele será removida do projeto.');
+        }
+
+        setMemberToRemove(null);
     };
 
     const handleLeaveTeam = async () => {
@@ -476,6 +514,38 @@ const Upload: React.FC = () => {
                 </div>
             )}
 
+            {memberToRemove && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl p-10 max-w-sm w-[90%] shadow-2xl flex flex-col items-center text-center border border-gray-100">
+                        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6">
+                            <Icon iconCenter="userLock" className="w-8 h-8" />
+                        </div>
+                        <h3 className="text-2xl font-black text-[#003465] uppercase tracking-tighter">
+                            {memberToRemove.type === 'professor' ? 'Remover Docente?' : 'Remover Aluno?'}
+                        </h3>
+                        <p className="text-gray-500 text-sm my-4 font-medium">
+                            {memberToRemove.type === 'professor'
+                                ? `Ao remover ${memberToRemove.name}, a validação deste docente também será removida quando o projeto for salvo.`
+                                : `Deseja remover ${memberToRemove.name} deste projeto?`}
+                        </p>
+                        <div className="flex flex-col w-full gap-3 mt-4">
+                            <Button
+                                onClick={confirmMemberRemoval}
+                                className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-full shadow-lg shadow-red-100"
+                            >
+                                Sim, Remover
+                            </Button>
+                            <button
+                                onClick={() => setMemberToRemove(null)}
+                                className="text-gray-400 font-bold py-2 text-xs uppercase tracking-widest hover:text-gray-600 transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/** --- CONTEÚDO PRINCIPAL (MANTIDO IGUAL) --- **/}
             <div className="w-full px-6 md:px-12 lg:px-20 mt-6 text-left">
                 <header className="bg-[#003465] text-white p-6 md:p-10 rounded-[40px] shadow-2xl">
@@ -574,7 +644,7 @@ const Upload: React.FC = () => {
                                             <span className={`text-[8px] font-black uppercase tracking-tighter ${c.status === 'accepted' ? 'text-green-400' : c.status === 'pending' ? 'text-yellow-500' : 'text-red-400'}`}>{c.status === 'accepted' ? 'Membro' : c.status === 'pending' ? 'Pendente' : 'Recusado'}</span>
                                         </div>
                                         <button
-                                            onClick={() => handleRemoveCollaborator(c.student?._id, c.status)}
+                                            onClick={() => handleRemoveCollaborator(c.student?._id, c.status, c.student?.name)}
                                             className={`text-xs ${c.status === 'accepted' ? 'text-amber-300 opacity-100' : 'text-red-400 opacity-0 group-hover:opacity-100'}`}
                                             title={c.status === 'accepted' ? 'Membros aceitos precisam sair do projeto pela propria pagina do projeto.' : 'Remover colaborador'}
                                         >
@@ -630,7 +700,7 @@ const Upload: React.FC = () => {
                                                     {p.status === 'accepted' ? 'Docente Confirmado' : p.status === 'pending' ? 'Convite Pendente' : 'Convite Recusado'}
                                                 </span>
                                             </div>
-                                            <button onClick={() => setInvitedProfessors(invitedProfessors.filter(i => i.professor?._id !== p.professor?._id))} className="opacity-0 group-hover:opacity-100 text-red-400 text-xs">×</button>
+                                            <button onClick={() => handleRemoveProfessor(p.professor?._id, p.professor?.name, p.status)} className="opacity-0 group-hover:opacity-100 text-red-400 text-xs">×</button>
                                         </div>
                                     ))}
                                 </div>
