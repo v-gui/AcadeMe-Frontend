@@ -46,8 +46,8 @@ const ForgotPassword: React.FC = () => {
 
     return (
         <div className="w-screen min-h-screen flex items-center justify-center bg-white relative overflow-hidden px-6">
-            <div className="w-full max-w-[500px] z-10">
-                <Link to="/" className="inline-flex mb-10">
+            <div className="w-full max-w-[500px] z-10 flex flex-col items-center">
+                <Link to="/" className="inline-flex mb-10 justify-center">
                     <img src={coloredLogo} alt="logo" className="w-[180px] h-auto hover:scale-105 transition-transform" />
                 </Link>
 
