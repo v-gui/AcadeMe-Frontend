@@ -9,7 +9,7 @@ import {
   FaPlus as add,
 } from 'react-icons/fa';
 
-// Mapeando os apelidos dos ícones
+
 const iconMap = {
   arrowLeft,
   arrowRight,
@@ -52,22 +52,26 @@ const buttonVariants = cva(
 );
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
-  iconLeft?: keyof typeof iconMap; // Permite passar o nome do ícone à esquerda
-  iconCenter?: keyof typeof iconMap; // Permite passar o nome do ícone ao centro
-  iconRight?: keyof typeof iconMap; // Permite passar o nome do ícone à direita
+  iconLeft?: keyof typeof iconMap;
+  iconCenter?: keyof typeof iconMap;
+  iconRight?: keyof typeof iconMap;
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, size, shape, iconLeft, iconCenter, iconRight, children, ...props }, ref) => {
+    const LeftIcon = iconLeft ? iconMap[iconLeft] : null;
+    const CenterIcon = iconCenter ? iconMap[iconCenter] : null;
+    const RightIcon = iconRight ? iconMap[iconRight] : null;
+
     return (
       <button
         ref={ref}
         className={cn(buttonVariants({ shape, size, className }))} 
         {...props}
       >
-        {iconLeft && <span className="mr-2">{iconMap[iconLeft]({})}</span>} {/* Adiciona ícone à esquerda */}
-        {children || (iconCenter && <span>{iconMap[iconCenter]({})}</span>)} {/* Adiciona conteúdo dentro do botão ou ícone ao centro */}
-        {iconRight && <span className="ml-2">{iconMap[iconRight]({})}</span>} {/* Adiciona ícone à direita */}
+        {LeftIcon && <span className="mr-2"><LeftIcon /></span>}
+        {children || (CenterIcon && <span><CenterIcon /></span>)}
+        {RightIcon && <span className="ml-2"><RightIcon /></span>}
       </button>
     );
   }

@@ -1,5 +1,5 @@
-﻿/* eslint-disable jsx-a11y/alt-text */
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+/* eslint-disable jsx-a11y/alt-text */
+import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import { Button } from '../components/Button';
 import ProjectCard from '../components/ProjectCard';
 import { useNavigate } from 'react-router-dom';
@@ -11,7 +11,7 @@ import Avatar from '../components/Avatar';
 import AppHeader from '../components/AppHeader';
 import EmptyState from '../components/EmptyState';
 import { ProjectRecord, SearchResults, StudentSummary } from '../types/models';
-import { canDeleteProject, countAcceptedMembers, getProjectNavigationPath, isProjectValidated } from '../utils/project';
+import { canDeleteProject, countAcceptedMembers, getProjectNavigationPath, isAcceptedProjectMember, isProjectAdmin, isProjectValidated, withViewerQuery } from '../utils/project';
 import useInviteMenu from '../hooks/useInviteMenu';
 
 const INTEREST_OPTIONS = [
@@ -25,28 +25,28 @@ const INTEREST_OPTIONS = [
 ].sort();
 
 const Profile: React.FC = () => {
-    const fileInputRef = useRef<HTMLInputElement>(null); 
-    const menuRef = useRef<HTMLDivElement>(null); 
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
-    
+
     const [user, setUser] = useState<StudentSummary | null>(null);
     const [projects, setProjects] = useState<ProjectRecord[]>([]);
 
-    // Estados de edição do Perfil
+
     const [isEditingBio, setIsEditingBio] = useState(false);
     const [tempBio, setTempBio] = useState("");
     const [isEditingInterests, setIsEditingInterests] = useState(false);
-    const [interestSearch, setInterestSearch] = useState(""); // Novo: específico para sidebar
+    const [interestSearch, setInterestSearch] = useState("");
 
-    // --- ESTADOS DA BUSCA GLOBAL (HEADER) ---
-    const [searchTerm, setSearchTerm] = useState(""); 
+
+    const [searchTerm, setSearchTerm] = useState("");
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
     const [searchResultStudents, setSearchResultStudents] = useState<SearchResults['students']>([]);
     const [searchResultProfessors, setSearchResultProfessors] = useState<SearchResults['professors']>([]);
     const [searchResultProjects, setSearchResultProjects] = useState<SearchResults['projects']>([]);
 
-    const [projectSearchTerm, setProjectSearchTerm] = useState(""); 
-    const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false); 
+    const [projectSearchTerm, setProjectSearchTerm] = useState("");
+    const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
 
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [idToDelete, setIdToDelete] = useState<string | null>(null);
@@ -60,19 +60,19 @@ const Profile: React.FC = () => {
         },
         onAccepted: async () => {
             if (user?._id) {
-                fetchProjects(user._id);
+                fetchProjects(user._id, user);
             }
         }
     });
 
-    const fetchProjects = (userId: string) => {
-        fetch(`${apiUrl}/students/${userId}/projects`)
+    const fetchProjects = useCallback((userId: string, viewer?: StudentSummary | null) => {
+        fetch(withViewerQuery(`${apiUrl}/students/${userId}/projects`, viewer))
             .then(res => res.json())
             .then((data: ProjectRecord[]) => setProjects(data))
             .catch(() => toast.error("Erro ao carregar projetos."));
-    };
+    }, [apiUrl]);
 
-    // Fecha menus ao clicar fora
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) setIsAccountMenuOpen(false);
@@ -81,7 +81,7 @@ const Profile: React.FC = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Carrega dados iniciais
+
     useEffect(() => {
         const savedUser = localStorage.getItem('@AcadeMe:user');
         if (!savedUser) {
@@ -96,10 +96,10 @@ const Profile: React.FC = () => {
         });
         setTempBio(parsedUser.bio || "");
 
-        fetchProjects(parsedUser._id);
-    }, [navigate, apiUrl]);
+        fetchProjects(parsedUser._id, parsedUser);
+    }, [fetchProjects, navigate]);
 
-    // --- LÓGICA DE BUSCA GLOBAL (HEADER) ---
+
     useEffect(() => {
         if (!searchTerm.trim()) {
             setSearchResultStudents([]);
@@ -108,7 +108,7 @@ const Profile: React.FC = () => {
             return;
         }
         const delayDebounceFn = setTimeout(() => {
-            fetch(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`)
+            fetch(withViewerQuery(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`, user))
                 .then(res => res.json())
                 .then((data: SearchResults) => {
                     setSearchResultStudents(data.students || []);
@@ -118,7 +118,7 @@ const Profile: React.FC = () => {
                 .catch(err => console.error("Erro na busca:", err));
         }, 300);
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, apiUrl]);
+    }, [searchTerm, apiUrl, user]);
 
     const handleLogout = () => {
         localStorage.removeItem('@AcadeMe:user');
@@ -126,7 +126,7 @@ const Profile: React.FC = () => {
         navigate('/');
     };
 
-    // Filtro de Projetos locais do portfólio
+
     const filteredProjects = useMemo(() => {
         return projects.filter(proj => 
             proj.title.toLowerCase().includes(projectSearchTerm.toLowerCase()) ||
@@ -134,7 +134,7 @@ const Profile: React.FC = () => {
         );
     }, [projects, projectSearchTerm]);
 
-    // Filtro de Interesses (Sidebar)
+
     const availableInterests = useMemo(() => {
         if (!interestSearch) return [];
         return INTEREST_OPTIONS.filter(opt => 
@@ -161,8 +161,12 @@ const Profile: React.FC = () => {
     };
 
     const openDeleteModal = (project: ProjectRecord) => {
-        if (!canDeleteProject(project)) {
-            toast.warn('Projetos com mais de um membro aceito nao podem ser excluidos. Cada integrante deve sair do projeto ate restar apenas uma pessoa.');
+        if (!canDeleteProject(project, user?._id)) {
+            toast.warn(
+                !isProjectAdmin(project, user?._id)
+                    ? 'Apenas o admin do projeto pode excluir o trabalho.'
+                    : 'Projetos com mais de um membro aceito nao podem ser excluidos. Os integrantes devem sair ate restar apenas uma pessoa.'
+            );
             return;
         }
 
@@ -174,7 +178,7 @@ const Profile: React.FC = () => {
         if (!idToDelete) return;
         setIsDeleting(true);
         try {
-            const res = await fetch(`${apiUrl}/projects/${idToDelete}`, { method: 'DELETE' });
+            const res = await fetch(`${apiUrl}/projects/${idToDelete}?requesterStudentId=${user?._id}`, { method: 'DELETE' });
             const data = await res.json().catch(() => null);
 
             if (res.ok) {
@@ -227,6 +231,7 @@ const Profile: React.FC = () => {
                 onSearchChange={(value) => { setSearchTerm(value); setIsDropdownVisible(true); }}
                 onSearchBlur={() => setTimeout(() => setIsDropdownVisible(false), 200)}
                 onStudentSelect={(studentId) => navigate(`/student/${studentId}`)}
+                onProfessorSelect={(professorId) => navigate(`/professor/${professorId}`)}
                 onProjectSelect={(project) => navigate(getProjectNavigationPath(project, user?._id, user?.role))}
                 currentUser={user}
                 menuRef={menuRef}
@@ -238,7 +243,7 @@ const Profile: React.FC = () => {
                 inviteMenu={inviteMenu}
             />
 
-            {/** --- MODAL DELETAR --- **/}
+            
             {showDeleteModal && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
                     <div className="bg-white rounded-3xl p-10 max-w-sm w-[90%] shadow-2xl flex flex-col items-center text-center border border-gray-100">
@@ -254,7 +259,7 @@ const Profile: React.FC = () => {
             )}
             
             <div className="profile-section flex flex-col md:flex-row flex-grow">
-                {/** --- SIDEBAR --- **/}
+                
                 <div className="profile-sidebar hidden md:flex flex-col bg-gradient-to-b from-[#003465] to-[#006ACB] w-full min-w-80 md:w-[350px] shrink-0 p-8 text-white shadow-2xl z-20">
                     <div className="profile-header flex flex-col items-center">
                         <input type="file" ref={fileInputRef} onChange={handleImageChange} className="hidden" accept="image/*" />
@@ -291,7 +296,7 @@ const Profile: React.FC = () => {
                                 <button onClick={() => { setIsEditingInterests(!isEditingInterests); setInterestSearch(""); }} className="text-[10px] font-bold underline text-blue-200 hover:text-white">{isEditingInterests ? "Pronto" : "Gerenciar"}</button>
                             </div>
 
-                            {/** DROPDOWN DE INTERESSES (SIDEBAR) **/}
+                            
                             {isEditingInterests && (
                                 <div className="mb-4 relative">
                                     <input 
@@ -323,12 +328,12 @@ const Profile: React.FC = () => {
                     </div>
                 </div>
 
-                {/** --- SEÇÃO PROJETOS --- **/}
+                
                 <div className="projects-section flex flex-col h-auto w-full bg-[#F8FAFC] p-8 md:p-12 lg:p-16 overflow-y-auto">
                     
                     <div className="projects-filters flex flex-col lg:flex-row items-center justify-between w-full mb-10 gap-6">
                         <div className="flex-1 max-w-2xl w-full">
-                            <TextBar 
+                            <TextBar
                                 type='search' 
                                 placeholder='O que você quer encontrar no seu portfólio?'                                 
                                 className="bg-white shadow-sm text-gray-800 font-medium rounded-2xl h-14"
@@ -348,10 +353,14 @@ const Profile: React.FC = () => {
                     <div className="projects-list w-full max-w-none mx-auto space-y-8 pb-20">
                         {filteredProjects.length > 0 ? (
                             filteredProjects.map((proj) => {
+                                const isAdmin = canDeleteProject(proj, user?._id);
                                 const acceptedMembersCount = countAcceptedMembers(proj);
-                                const deleteLocked = !canDeleteProject(proj);
+                                const canEdit = isAcceptedProjectMember(proj, user?._id);
+                                const deleteLocked = !isAdmin;
                                 const deleteTitle = deleteLocked
-                                    ? `Exclusao bloqueada: ${acceptedMembersCount} membros aceitos na equipe`
+                                    ? acceptedMembersCount > 1
+                                        ? 'Exclusao bloqueada: ha mais de um membro aceito'
+                                        : 'Exclusao bloqueada: apenas o admin pode excluir'
                                     : 'Excluir projeto';
 
                                 return (
@@ -362,13 +371,13 @@ const Profile: React.FC = () => {
                                         description={proj.description}
                                         tags={proj.tags || ["AcadeMe"]}
                                         date={new Date(proj.createdAt || Date.now()).toLocaleDateString()}
-                                        imageUrl={proj.imageUrl || logoBlockchain} 
+                                        imageUrl={proj.imageUrl || logoBlockchain}
                                         isValidated={isProjectValidated(proj)}
                                         onDelete={() => openDeleteModal(proj)}
                                         isDeleteDisabled={deleteLocked}
                                         deleteTitle={deleteTitle}
-                                        onEdit={(id) => navigate(`/upload?edit=${id}`)}
-                                        onView={() => navigate(getProjectNavigationPath(proj, user?._id, user?.role))}
+                                        onEdit={canEdit ? (id) => navigate(`/upload?edit=${id}`) : undefined}
+                                        onView={() => navigate(`/project/${proj._id}`)}
                                     />
                                 );
                             })

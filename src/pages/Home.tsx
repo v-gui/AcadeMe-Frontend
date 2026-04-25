@@ -17,8 +17,8 @@ import { Icon } from '../components/Icon';
 import { toast } from 'react-toastify';
 import Avatar from '../components/Avatar';
 import ValidatedBadge from '../components/ValidatedBadge';
-import { SearchResults } from '../types/models';
-import { getProjectNavigationPath, isProjectValidated } from '../utils/project';
+import { ProjectRecord, SearchResults } from '../types/models';
+import { getProjectNavigationPath, isProjectValidated, withViewerQuery } from '../utils/project';
 import InviteMenu from '../components/InviteMenu';
 import useInviteMenu from '../hooks/useInviteMenu';
 
@@ -35,11 +35,11 @@ const Home: React.FC = () => {
     const navigate = useNavigate();
     const menuRef = useRef<HTMLDivElement>(null);
     
-    // Estados das Vitrines Fixas
+
     const [alunos, setAlunos] = useState<Aluno[]>([]);
-    const [endorsedProjects, setEndorsedProjects] = useState<any[]>([]); 
+    const [endorsedProjects, setEndorsedProjects] = useState<ProjectRecord[]>([]);
     
-    // --- ESTADOS DA BUSCA GLOBAL (DROPDOWN) ---
+
     const [searchTerm, setSearchTerm] = useState("");
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
     const [searchResultStudents, setSearchResultStudents] = useState<SearchResults['students']>([]);
@@ -56,7 +56,7 @@ const Home: React.FC = () => {
         }
     });
 
-    // Carregamento Inicial
+
     useEffect(() => {
         fetch(`${apiUrl}/students-active`)
             .then((res) => res.json())
@@ -66,7 +66,7 @@ const Home: React.FC = () => {
         fetch(`${apiUrl}/projects-endorsed`)
             .then((res) => res.json())
             .then((data) => setEndorsedProjects(data))
-            .catch((err) => console.error("Erro ao carregar projetos chancelados:", err));
+            .catch((err) => console.error("Erro ao carregar projetos validados:", err));
 
         const savedUser = localStorage.getItem('@AcadeMe:user');
         if (savedUser) setCurrentUser(JSON.parse(savedUser));
@@ -80,7 +80,7 @@ const Home: React.FC = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [apiUrl]);
 
-    // --- LÓGICA DE BUSCA GLOBAL COM DEBOUNCE ---
+
     useEffect(() => {
         if (!searchTerm.trim()) {
             setSearchResultStudents([]);
@@ -90,7 +90,7 @@ const Home: React.FC = () => {
         }
 
         const delayDebounceFn = setTimeout(() => {
-            fetch(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`)
+            fetch(withViewerQuery(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`, currentUser))
                 .then(res => res.json())
                 .then((data: SearchResults) => {
                     setSearchResultStudents(data.students || []);
@@ -101,12 +101,14 @@ const Home: React.FC = () => {
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, apiUrl]);
+    }, [searchTerm, apiUrl, currentUser]);
 
     const vitrineAlunos = useMemo(() => {
         if (alunos.length === 0) return [];
         return [...alunos].sort(() => 0.5 - Math.random()).slice(0, 3);
     }, [alunos]);
+
+    const vitrineExcelencia = useMemo(() => endorsedProjects.slice(0, 3), [endorsedProjects]);
 
     const handleLogout = () => {
         localStorage.removeItem('@AcadeMe:user');
@@ -118,14 +120,14 @@ const Home: React.FC = () => {
     return (
         <div className="Home relative overflow-x-hidden pt-20"> 
             
-            {/** --- HEADER FIXO --- **/}
+            
             <header className="fixed top-0 left-0 w-full bg-white/95 backdrop-blur-md shadow-md z-[1000] py-3 border-b border-gray-100">
                 <div className="w-full flex items-center justify-between px-6 md:px-12 lg:px-20">
                     <div className="flex-shrink-0">
                         <img src={coloredLogo} alt="logo" className="h-10 cursor-pointer" onClick={() => navigate('/')} />
                     </div>
                     
-                    {/** BARRA DE PESQUISA ATUALIZADA **/}
+                    
                     <div className="flex-1 max-w-2xl mx-8 relative">
                         <TextBar 
                             variant="default" 
@@ -143,7 +145,7 @@ const Home: React.FC = () => {
                         {searchTerm && isDropdownVisible && (
                             <div className="absolute top-full left-0 w-full bg-white shadow-[0_20px_60px_rgba(0,52,101,0.15)] rounded-b-3xl mt-1 border border-gray-100 overflow-hidden text-left z-[1100] max-h-[500px] overflow-y-auto">
                                 
-                                {/** CATEGORIA: ALUNOS (AZUL) **/}
+                                
                                 {searchResultStudents.length > 0 && (
                                     <div>
                                         <div className="bg-blue-50 px-5 py-3 border-y border-blue-200">
@@ -168,10 +170,10 @@ const Home: React.FC = () => {
                                             <span className="text-[10px] font-black text-[#006ACB] uppercase tracking-[0.2em] flex items-center gap-2"> Professores </span>
                                         </div>
                                         {searchResultProfessors.map(professor => (
-                                            <div key={professor._id} className="flex items-center gap-4 p-4 border-b border-gray-50 last:border-none group">
+                                            <div key={professor._id} onClick={() => navigate(`/professor/${professor._id}`)} className="flex items-center gap-4 p-4 hover:bg-blue-50/50 cursor-pointer border-b border-gray-50 last:border-none group">
                                                 <Avatar name={professor.name} image={professor.profileImage} size="sm" className="shadow-sm" />
                                                 <div className="flex flex-col flex-1">
-                                                    <span className="font-bold text-[#003465] text-xs">
+                                                    <span className="font-bold text-[#003465] text-xs group-hover:text-[#006ACB] transition-colors">
                                                         {professor.academicTitle ? `${professor.academicTitle} ${professor.name}` : professor.name}
                                                     </span>
                                                     <span className="text-gray-400 text-[9px] uppercase font-black tracking-wider mt-0.5">
@@ -183,7 +185,6 @@ const Home: React.FC = () => {
                                     </div>
                                 )}
 
-                                {/** CATEGORIA: PROJETOS (VERDE) **/}
                                 {searchResultProjects.length > 0 && (
                                     <div>
                                         <div className="bg-blue-50 px-5 py-3 border-y border-blue-200">
@@ -263,7 +264,7 @@ const Home: React.FC = () => {
                 </div>
             </header>
 
-            {/** RESTANTE DAS SEÇÕES (TOP, SEARCH, SHARE, TALENTOS, PROJETOS, FOOTER) MANTIDAS IGUAIS **/}
+            
             <section id="top-section" className="bg-gradient-to-br from-[#006ACB] to-[#003465] min-h-[90vh] flex items-center justify-center">
                  <div className="top-container flex flex-col items-center justify-center text-center w-full px-6">
                     <img src={logo} alt="logo" className="w-32 md:w-48 mb-8" />
@@ -283,7 +284,7 @@ const Home: React.FC = () => {
                 </div>
              </section>
 
-            {/** SEÇÕES DE EXPLICAÇÃO **/}
+            
             <section id="search-section" className="relative h-screen flex items-center justify-center px-8 md:px-16 lg:px-32 bg-white">
                 <div className="absolute inset-y-0 left-0 w-auto h-full hidden md:block">
                     <img src={moldure} alt="Moldura" className="h-full object-contain rotate-180 opacity-20" />
@@ -299,9 +300,9 @@ const Home: React.FC = () => {
                 </div>
             </section>
 
-            {/** 3. SEÇÃO SHARE **/}
+            
             <section id="share-section" className='bg-gradient-to-r from-[#006ACB] to-[#003465] min-h-screen flex items-center justify-center px-8 md:px-16 lg:px-32'>
-                {/* Removido max-w-7xl para permitir expansão total */}
+                
                 <div className="share-container flex flex-col md:flex-row items-center justify-between w-full gap-10 md:gap-56">
                     <div className="search-content-body flex flex-col items-center text-center md:items-start md:text-left flex-1 lg:mr-20">
                         <h1 className='share-title text-[#F0F2F5] text-[28px] md:text-[40px] mb-4 font-bold'>Compartilhe</h1>
@@ -313,7 +314,7 @@ const Home: React.FC = () => {
                 </div>
             </section>
 
-            {/** VITRINES **/}
+            
             <section className="py-24 bg-gray-50 flex flex-col items-center px-8 md:px-16 lg:px-32">
                 <h1 className='text-[#006ACB] font-black text-[28px] md:text-[40px] mb-20 text-center uppercase tracking-tighter'>Nossos Talentos</h1>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 w-full max-w-7xl">
@@ -326,20 +327,20 @@ const Home: React.FC = () => {
             <section id='endorsed-projects-section' className='bg-gradient-to-r from-[#006ACB] to-[#003465] py-24 px-8 md:px-16 lg:px-32 relative flex flex-col items-center'>
                 <div className="text-center mb-16 text-white">
                     <h1 className='font-black text-[28px] md:text-[40px] mb-4 uppercase tracking-tighter'>Trabalhos de Excelência</h1>
-                    <p className="text-blue-200 text-sm md:text-base max-w-2xl mx-auto font-medium">Projetos que receberam o chancelamento oficial do corpo docente.</p>
+                    <p className="text-blue-200 text-sm md:text-base max-w-2xl mx-auto font-medium">Projetos que receberam validação oficial do corpo docente.</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 w-full max-w-7xl">
-                    {endorsedProjects.map((proj) => (
-                        <ShowcaseProjectCard 
-                            key={proj._id} id={proj._id} title={proj.title} description={proj.description} tags={proj.tags || []} 
-                            date={new Date(proj.createdAt).toLocaleDateString()} imageUrl={proj.imageUrl || logoBlockchain}
+                    {vitrineExcelencia.map((proj) => (
+                        <ShowcaseProjectCard
+                            key={proj._id} id={proj._id} title={proj.title} description={proj.description} tags={proj.tags || []}
+                            date={new Date(proj.createdAt || Date.now()).toLocaleDateString()} imageUrl={proj.imageUrl || logoBlockchain}
                             onView={() => navigate(getProjectNavigationPath(proj, currentUser?._id, currentUser?.role))}
                         />
                     ))}
                 </div>
             </section>
 
-            {/** FOOTER **/}
+            
             <footer className='footer-container flex flex-col md:flex-row md:items-end justify-between gap-6 px-10 md:px-20 lg:px-32 py-8 bg-white border-t border-gray-100'>
                 <img src={coloredLogo} alt="Logo" className="w-16 mx-auto md:mx-0 shrink-0" />
 

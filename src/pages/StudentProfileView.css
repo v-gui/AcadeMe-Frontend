@@ -1,11 +1,11 @@
-/* StudentProfileView.css */
 
-/* --- LAYOUT GERAL --- */
+
+
 .student-view-container {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    background-color: #F0F2F5; /* Fundo cinza claro padrão AcadeMe */
+    background-color: #F0F2F5; 
     font-family: 'Inter', sans-serif;
 }
 
@@ -15,7 +15,7 @@
     flex-direction: row;
 }
 
-/* --- SIDEBAR (PERFIL) --- */
+
 .student-view-sidebar {
     width: 350px;
     background: linear-gradient(180deg, #003465 0%, #006ACB 100%);
@@ -28,7 +28,7 @@
     box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
 }
 
-/* Avatar Circular na Sidebar */
+
 .student-view-avatar-wrapper {
     width: 160px;
     height: 160px;
@@ -68,7 +68,7 @@
     margin: 20px 0;
 }
 
-/* Labels e Textos da Sidebar */
+
 .student-view-label {
     font-size: 10px;
     font-weight: 800;
@@ -91,7 +91,7 @@
     opacity: 0.9;
 }
 
-/* --- ÁREA PRINCIPAL (PORTFÓLIO) --- */
+
 .student-view-main {
     flex: 1;
     padding: 60px 80px;
@@ -117,14 +117,14 @@
     border-radius: 2px;
 }
 
-/* Lista de Cards */
+
 .student-view-projects-list {
     display: flex;
     flex-direction: column;
     gap: 20px;
 }
 
-/* --- BOTÕES --- */
+
 .student-view-back-button {
     margin-top: auto;
     background: rgba(255, 255, 255, 0.1);
@@ -145,7 +145,7 @@
     color: #003465;
 }
 
-/* Responsividade Básica */
+
 @media (max-width: 768px) {
     .student-view-content {
         flex-direction: column;

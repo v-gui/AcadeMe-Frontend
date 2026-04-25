@@ -9,16 +9,16 @@ interface AvatarProps {
 }
 
 const Avatar: React.FC<AvatarProps> = ({ name, image, size = 'md', className = '', onClick }) => {
-  // Lógica centralizada da imagem
+
   const getSrc = () => {
     if (image && image.trim() !== "" && image !== "undefined") {
       return image;
     }
-    // API de iniciais dinâmica
+
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=006ACB&color=fff&bold=true`;
   };
 
-  // Definição de tamanhos padrão (opcional, ajuda a manter o design system)
+
   const sizeClasses = {
     sm: 'w-8 h-8 text-[10px]',
     md: 'w-10 h-10 text-xs',
@@ -32,7 +32,7 @@ const Avatar: React.FC<AvatarProps> = ({ name, image, size = 'md', className = '
       alt={name}
       onClick={onClick}
       className={`rounded-full object-cover transition-all ${sizeClasses[size]} ${className}`}
-      // Tratamento de erro caso a imagem do banco esteja quebrada
+
       onError={(e) => {
         e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=006ACB&color=fff`;
       }}

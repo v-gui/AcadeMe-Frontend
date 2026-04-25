@@ -22,10 +22,7 @@ interface InviteMenuProps {
     onDecline: (id: string) => void;
 }
 
-/**
- * Shared notification dropdown for project-related invites.
- * Keeping this in one place avoids visual drift between student and professor profiles.
- */
+
 const InviteMenu: React.FC<InviteMenuProps> = ({
     menuRef,
     title,

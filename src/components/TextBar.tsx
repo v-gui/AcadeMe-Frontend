@@ -1,4 +1,4 @@
-// TextBar.tsx
+
 
 import { InputHTMLAttributes, forwardRef, useState } from 'react';
 import { VariantProps, cva } from 'class-variance-authority';
@@ -9,11 +9,11 @@ import {
   FaCheck as check,
   FaSearch as search,
   FaPlus as add,
-} from 'react-icons/fa'; // Importando os ícones com apelidos
+} from 'react-icons/fa';
 
 
 
-// Mapeando os apelidos dos ícones
+
 const iconMap = {
   arrowLeft,
   arrowRight,
@@ -22,9 +22,9 @@ const iconMap = {
   add,
 };
 
-// Definindo as variantes de estilo do input usando cva
+
 const inputVariants = cva(
-  "focus:outline-none flex-1", // Estilo base do input
+  "focus:outline-none flex-1",
   {
     variants: {
       variant: {
@@ -57,9 +57,9 @@ const inputVariants = cva(
 
 
 
-// Definindo as variantes de estilo para o label usando cva
+
 const labelVariants = cva(
-  "mb-1 text-left font-medium", // Estilo base do label
+  "mb-1 text-left font-medium",
   {
     variants: {
       labelSize: {
@@ -84,7 +84,7 @@ const labelVariants = cva(
   }
 );
 
-// Definindo as props para o componente TextBar
+
 interface TextBarProps extends
   InputHTMLAttributes<HTMLInputElement>,
   VariantProps<typeof inputVariants>,
@@ -92,23 +92,23 @@ interface TextBarProps extends
   label?: string;
   iconLeft?: keyof typeof iconMap;
   iconRight?: keyof typeof iconMap;
-  iconColor?: string; // Prop para definir a cor dos ícones
-  hideIconsOnInput?: boolean; // Nova prop booleana para ocultar ícones
+  iconColor?: string;
+  hideIconsOnInput?: boolean;
 }
 
-// Criando o componente TextBar
+
 const TextBar = forwardRef<HTMLInputElement, TextBarProps>(
   ({ className, variant, textSize, textColor, labelSize, labelColor, label, iconLeft, iconRight, iconColor = '#E5E7EB', hideIconsOnInput = false, ...props }, ref) => {
-    // Estados para gerenciar o foco no input e o valor digitado
+
     const [isFocused, setIsFocused] = useState(false);
     const [inputValue, setInputValue] = useState('');
 
-    // Manipulador de mudança no input
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       setInputValue(e.target.value);
     };
 
-    // Lógica para determinar se os ícones devem ser exibidos
+
     const shouldHideIcons = hideIconsOnInput && inputValue.length > 0;
 
     return (
@@ -122,7 +122,7 @@ const TextBar = forwardRef<HTMLInputElement, TextBarProps>(
         >
           {!shouldHideIcons && iconLeft && (
             <div className="mr-2 ml-2 bg-white p-3">
-              {iconMap[iconLeft]({ color: iconColor, size: '1.25em' })} {/* Atribuindo a cor e o tamanho */}
+              {iconMap[iconLeft]({ color: iconColor, size: '1.25em' })} 
             </div>
           )}
           <input
@@ -136,7 +136,7 @@ const TextBar = forwardRef<HTMLInputElement, TextBarProps>(
           />
           {!shouldHideIcons && iconRight && (
             <div className="mr-8 ml-2 bg-white p-3">
-              {iconMap[iconRight]({ color: iconColor, size: '1.25em' })} {/* Atribuindo a cor e o tamanho */}
+              {iconMap[iconRight]({ color: iconColor, size: '1.25em' })} 
             </div>
           )}
         </div>

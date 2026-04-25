@@ -1,4 +1,4 @@
-﻿/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable jsx-a11y/alt-text */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -13,7 +13,7 @@ import ValidatedBadge from '../components/ValidatedBadge';
 import AppHeader from '../components/AppHeader';
 import EmptyState from '../components/EmptyState';
 import { SearchResults } from '../types/models';
-import { getProjectNavigationPath, isProjectValidated } from '../utils/project';
+import { getProjectNavigationPath, isProjectAdmin, isProjectValidated, withViewerQuery } from '../utils/project';
 import useInviteMenu from '../hooks/useInviteMenu';
 
 interface Aluno {
@@ -29,22 +29,27 @@ const ProjectView: React.FC = () => {
     const menuRef = useRef<HTMLDivElement>(null);
     
     const [project, setProject] = useState<any>(null);
+    const [loadError, setLoadError] = useState("");
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
 
-    // --- ESTADOS DA BUSCA GLOBAL (HEADER) ---
+
     const [searchTerm, setSearchTerm] = useState("");
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
     const [searchResultStudents, setSearchResultStudents] = useState<SearchResults['students']>([]);
     const [searchResultProfessors, setSearchResultProfessors] = useState<SearchResults['professors']>([]);
     const [searchResultProjects, setSearchResultProjects] = useState<SearchResults['projects']>([]);
 
-    // Estados da validação docente
+
     const [endorseComment, setEndorseComment] = useState("");
     const [isEndorsing, setIsEndorsing] = useState(false);
     const [isLeavingTeam, setIsLeavingTeam] = useState(false);
     const [showLeaveTeamModal, setShowLeaveTeamModal] = useState(false);
+    const [isProfessorLeaving, setIsProfessorLeaving] = useState(false);
+    const [showProfessorLeaveModal, setShowProfessorLeaveModal] = useState(false);
+    const [showDeleteValidationModal, setShowDeleteValidationModal] = useState(false);
+    const [isDeletingValidation, setIsDeletingValidation] = useState(false);
 
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
     const { inviteMenu } = useInviteMenu(currentUser, {
@@ -63,18 +68,29 @@ const ProjectView: React.FC = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Carregamento do Projeto e Usuário
+
     useEffect(() => {
         const savedUser = localStorage.getItem('@AcadeMe:user');
-        if (savedUser) setCurrentUser(JSON.parse(savedUser));
+        const parsedUser = savedUser ? JSON.parse(savedUser) : null;
+        if (parsedUser) setCurrentUser(parsedUser);
 
-        fetch(`${apiUrl}/projects/${id}`)
-            .then(res => res.json())
-            .then(data => setProject(data))
-            .catch(err => console.error("Erro ao carregar projeto:", err));
+        fetch(withViewerQuery(`${apiUrl}/projects/${id}`, parsedUser))
+            .then(async res => {
+                const data = await res.json().catch(() => null);
+                if (!res.ok) throw new Error(data?.error || "Erro ao carregar projeto.");
+                return data;
+            })
+            .then(data => {
+                setProject(data);
+                setLoadError("");
+            })
+            .catch(err => {
+                setLoadError(err.message || "Erro ao carregar projeto.");
+                console.error("Erro ao carregar projeto:", err);
+            });
     }, [id, apiUrl]);
 
-    // --- LÓGICA DE BUSCA GLOBAL (HEADER) ---
+
     useEffect(() => {
         if (!searchTerm.trim()) {
             setSearchResultStudents([]);
@@ -84,7 +100,7 @@ const ProjectView: React.FC = () => {
         }
 
         const delayDebounceFn = setTimeout(() => {
-            fetch(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`)
+            fetch(withViewerQuery(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`, currentUser))
                 .then(res => res.json())
                 .then((data: SearchResults) => {
                     setSearchResultStudents(data.students || []);
@@ -95,7 +111,7 @@ const ProjectView: React.FC = () => {
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, apiUrl]);
+    }, [searchTerm, apiUrl, currentUser]);
 
     const handleLogout = () => {
         localStorage.removeItem('@AcadeMe:user');
@@ -111,11 +127,11 @@ const ProjectView: React.FC = () => {
         link.click();
     };
 
-    // Função para o professor validar o projeto
+
     const handleEndorse = async () => {
         if (!currentUser || currentUser.role !== 'professor') return;
         if (!endorseComment.trim()) {
-            toast.warn("Por favor, insira um breve comentário para o chancelamento.");
+            toast.warn("Por favor, insira um comentário para a validação.");
             return;
         }
         setIsEndorsing(true);
@@ -129,8 +145,8 @@ const ProjectView: React.FC = () => {
             
             if (response.ok) {
                 const data = await response.json();
-                toast.success('Chancelamento acadêmico registrado com sucesso.');
-                setProject(data.project); 
+                toast.success('Validação registrada com sucesso.');
+                setProject(data.project);
                 setEndorseComment("");
             } else {
                 const errorData = await response.json();
@@ -169,6 +185,8 @@ const ProjectView: React.FC = () => {
         );
     }, [currentUser, project]);
 
+    const canCurrentUserEditProject = isCurrentUserAcceptedMember;
+
     const handleLeaveTeam = async () => {
         if (!currentUser || currentUser.role !== 'student' || !id) return;
 
@@ -197,6 +215,34 @@ const ProjectView: React.FC = () => {
         }
     };
 
+    const handleProfessorLeave = async (keepEndorsement: boolean) => {
+        if (!currentUser || currentUser.role !== 'professor' || !id) return;
+
+        setIsProfessorLeaving(true);
+
+        try {
+            const response = await fetch(`${apiUrl}/projects/${id}/professor-leave`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ professorId: currentUser._id, keepEndorsement })
+            });
+
+            const data = await response.json().catch(() => null);
+
+            if (response.ok) {
+                toast.success(data?.message || 'Você saiu do projeto.');
+                setProject(data.project);
+                setShowProfessorLeaveModal(false);
+            } else {
+                toast.error(data?.error || 'Não foi possível sair do projeto.');
+            }
+        } catch (err) {
+            toast.error("Erro de conexão com o servidor.");
+        } finally {
+            setIsProfessorLeaving(false);
+        }
+    };
+
     const handleRespondProfessorInvite = async (status: 'accepted' | 'declined') => {
         if (!currentUser || currentUser.role !== 'professor' || !id) return;
 
@@ -204,14 +250,14 @@ const ProjectView: React.FC = () => {
             const response = await fetch(`${apiUrl}/projects/${id}/respond-professor-invite`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ professorId: currentUser._id, status })
+                body: JSON.stringify({ professorId: currentUser._id, status, comment: '' })
             });
 
             const data = await response.json();
 
             if (response.ok) {
                 setProject(data.project);
-                toast.success(status === 'accepted' ? 'Convite de validação aceito.' : 'Convite recusado.');
+                toast.success(status === 'accepted' ? 'Convite aceito e validação registrada.' : 'Convite recusado.');
             } else {
                 toast.error(data.error || 'Não foi possível responder ao convite.');
             }
@@ -219,6 +265,44 @@ const ProjectView: React.FC = () => {
             toast.error("Erro de conexão com o servidor.");
         }
     };
+
+    const handleDeleteValidation = async () => {
+        if (!currentUser || currentUser.role !== 'professor' || !project?._id) return;
+
+        setIsDeletingValidation(true);
+
+        try {
+            const response = await fetch(`${apiUrl}/projects/${project._id}/endorse/${currentUser._id}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json().catch(() => null);
+
+            if (response.ok) {
+                setProject(data.project);
+                setShowDeleteValidationModal(false);
+                toast.info('Validação removida.');
+            } else {
+                toast.error(data?.error || 'Não foi possível excluir a validação.');
+            }
+        } catch (error) {
+            toast.error('Erro ao excluir a validação.');
+        } finally {
+            setIsDeletingValidation(false);
+        }
+    };
+
+    if (loadError) {
+        return (
+            <div className="flex h-screen flex-col items-center justify-center gap-4 bg-[#F0F2F5] px-6 text-center">
+                <h1 className="text-2xl font-black uppercase tracking-tighter text-[#003465]">Projeto indisponível</h1>
+                <p className="max-w-md text-sm font-medium text-gray-500">{loadError}</p>
+                <Button onClick={() => navigate('/')} shape="pill" className="font-black text-white uppercase text-[10px] tracking-[0.2em] px-10 py-4 shadow-xl">
+                    Voltar
+                </Button>
+            </div>
+        );
+    }
 
     if (!project) return <div className="flex h-screen items-center justify-center font-bold text-[#003465] animate-pulse uppercase tracking-widest text-[10px]">Carregando projeto...</div>;
 
@@ -234,6 +318,7 @@ const ProjectView: React.FC = () => {
                 onSearchChange={(value) => { setSearchTerm(value); setIsDropdownVisible(true); }}
                 onSearchBlur={() => setTimeout(() => setIsDropdownVisible(false), 200)}
                 onStudentSelect={(studentId) => navigate(`/student/${studentId}`)}
+                onProfessorSelect={(professorId) => navigate(`/professor/${professorId}`)}
                 onProjectSelect={(project) => navigate(getProjectNavigationPath(project, currentUser?._id, currentUser?.role))}
                 currentUser={currentUser}
                 menuRef={menuRef}
@@ -246,7 +331,7 @@ const ProjectView: React.FC = () => {
                 unauthenticatedActions={<Button shape="pill" size="sm" className="text-xs font-bold px-6" onClick={() => navigate('/login')}>Login</Button>}
             />
 
-            {/* MODAL ZOOM */}
+            
             {selectedImage && (
                 <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/95 backdrop-blur-sm cursor-zoom-out p-4 animate-in fade-in duration-300" onClick={() => setSelectedImage(null)}>
                     <img src={selectedImage} className="max-w-full max-h-full rounded-lg shadow-2xl animate-in zoom-in duration-300" />
@@ -283,11 +368,91 @@ const ProjectView: React.FC = () => {
                 </div>
             )}
 
-            {/* --- ÁREA PRINCIPAL DO PROJETO --- */}
+            {showProfessorLeaveModal && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl p-10 max-w-sm w-[90%] shadow-2xl flex flex-col items-center text-center border border-gray-100">
+                        <div className="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mb-6">
+                            <Icon iconCenter="userLock" className="w-8 h-8" />
+                        </div>
+                        <h3 className="text-2xl font-black text-[#003465] uppercase tracking-tighter">Sair Do Projeto?</h3>
+                        <p className="text-gray-500 text-sm my-4 font-medium">
+                            {hasAlreadyEndorsed
+                                ? 'Você deseja manter sua validação docente neste trabalho?'
+                                : 'Você será removido da lista de docentes convidados deste projeto.'}
+                        </p>
+                        <div className="flex flex-col w-full gap-3 mt-4">
+                            {hasAlreadyEndorsed ? (
+                                <>
+                                    <Button
+                                        onClick={() => handleProfessorLeave(true)}
+                                        disabled={isProfessorLeaving}
+                                        className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-full shadow-lg shadow-green-100"
+                                    >
+                                        {isProfessorLeaving ? "Saindo..." : "Sair e manter validação"}
+                                    </Button>
+                                    <Button
+                                        onClick={() => handleProfessorLeave(false)}
+                                        disabled={isProfessorLeaving}
+                                        className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-full shadow-lg shadow-red-100"
+                                    >
+                                        {isProfessorLeaving ? "Saindo..." : "Sair e remover validação"}
+                                    </Button>
+                                </>
+                            ) : (
+                                <Button
+                                    onClick={() => handleProfessorLeave(false)}
+                                    disabled={isProfessorLeaving}
+                                    className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-full shadow-lg shadow-red-100"
+                                >
+                                    {isProfessorLeaving ? "Saindo..." : "Sim, Sair"}
+                                </Button>
+                            )}
+                            <button
+                                onClick={() => setShowProfessorLeaveModal(false)}
+                                disabled={isProfessorLeaving}
+                                className="text-gray-400 font-bold py-2 text-xs uppercase tracking-widest hover:text-gray-600 transition-colors disabled:opacity-60"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showDeleteValidationModal && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl p-10 max-w-sm w-[90%] shadow-2xl flex flex-col items-center text-center border border-gray-100">
+                        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6">
+                            <Icon iconCenter="userLock" className="w-8 h-8" />
+                        </div>
+                        <h3 className="text-2xl font-black text-[#003465] uppercase tracking-tighter">Excluir Validação?</h3>
+                        <p className="text-gray-500 text-sm my-4 font-medium">
+                            Ao excluir esta validação, o comentário associado também será removido deste trabalho.
+                        </p>
+                        <div className="flex flex-col w-full gap-3 mt-4">
+                            <Button
+                                onClick={handleDeleteValidation}
+                                disabled={isDeletingValidation}
+                                className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-full shadow-lg shadow-red-100"
+                            >
+                                {isDeletingValidation ? "Excluindo..." : "Sim, excluir validação"}
+                            </Button>
+                            <button
+                                onClick={() => setShowDeleteValidationModal(false)}
+                                disabled={isDeletingValidation}
+                                className="text-gray-400 font-bold py-2 text-xs uppercase tracking-widest hover:text-gray-600 transition-colors disabled:opacity-60"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="w-full px-6 md:px-12 lg:px-20 mt-6 text-left">
                 <header className="bg-[#003465] text-white p-6 md:p-10 rounded-[40px] shadow-2xl">
                     <div className="grid grid-cols-1 lg:grid-cols-[180px_1fr_240px] gap-8 items-stretch">
-                        {/* COLUNA 1: CAPA + TAGS */}
+                        
                         <div className="flex flex-col gap-5">
                             <div className="relative w-full aspect-square">
                                 <div className="w-full h-full bg-white rounded-[28px] flex items-center justify-center p-2 shadow-inner overflow-hidden border-4 border-white/10">
@@ -304,7 +469,7 @@ const ProjectView: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* COLUNA 2: TÍTULO E DESCRIÇÃO */}
+                        
                         <div className="flex flex-col gap-4">
                             <div className="bg-white/[0.03] border border-white/[0.08] p-4 rounded-[20px] shadow-inner">
                                 <label className="text-blue-300/60 text-[12px] font-black uppercase tracking-[0.2em] block mb-1">Título do Trabalho</label>
@@ -319,7 +484,7 @@ const ProjectView: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* COLUNA 3: EQUIPE */}
+                        
                         <div className="bg-white/[0.02] backdrop-blur-xl rounded-[28px] p-4 md:p-5 border border-white/[0.08] flex flex-col gap-4 shadow-xl">
                             <div className="flex items-center justify-between border-b border-white/[0.05] pb-2">
                                 <h3 className="text-white/80 text-[12px] font-black uppercase tracking-widest">Equipe</h3>
@@ -333,8 +498,10 @@ const ProjectView: React.FC = () => {
                                         <Avatar name={item.student?.name} image={item.student?.profileImage} size="sm" className="border border-white/10" />
                                         <div className="flex flex-col flex-1">
                                             <span className="text-white/90 font-bold text-[12px] group-hover:text-blue-300 transition-colors">{item.student?.name}</span>
-                                            <span className="text-green-400 text-[8px] font-black uppercase tracking-widest">Membro</span>
-                                        </div>                                            
+                                            <span className="text-green-400 text-[8px] font-black uppercase tracking-widest">
+                                                {isProjectAdmin(project, item.student?._id || item.student) ? 'Admin' : 'Membro'}
+                                            </span>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -342,10 +509,14 @@ const ProjectView: React.FC = () => {
                                 <div className="border-t border-white/[0.05] pt-3 flex flex-col gap-2.5">
                                     <h4 className="text-amber-100 text-[10px] font-black uppercase tracking-widest">{invitedProfessorsLabel}</h4>
                                     {project.invitedProfessors.map((invite: any, i: number) => (
-                                        <div key={`prof-${i}`} className="flex items-center gap-2.5 bg-amber-500/10 p-2.5 rounded-lg border border-amber-300/10">
+                                        <div
+                                            key={`prof-${i}`}
+                                            onClick={() => invite.professor?._id && navigate(`/professor/${invite.professor._id}`)}
+                                            className="flex items-center gap-2.5 bg-amber-500/10 p-2.5 rounded-lg border border-amber-300/10 hover:bg-amber-500/20 transition-all cursor-pointer group"
+                                        >
                                             <Avatar name={invite.professor?.name} image={invite.professor?.profileImage} size="sm" className="border border-amber-200/20" />
                                             <div className="flex flex-col flex-1">
-                                                <span className="text-white/90 font-bold text-[12px]">{invite.professor?.academicTitle || 'Prof.'} {invite.professor?.name}</span>
+                                                <span className="text-white/90 font-bold text-[12px] group-hover:text-amber-100 transition-colors">{invite.professor?.academicTitle || 'Prof.'} {invite.professor?.name}</span>
                                                 <span className={`text-[8px] font-black uppercase tracking-widest ${invite.status === 'accepted' ? 'text-green-400' : invite.status === 'pending' ? 'text-yellow-400' : 'text-red-400'}`}>
                                                     {invite.status === 'accepted' ? 'Docente Confirmado' : invite.status === 'pending' ? 'Convite Pendente' : 'Convite Recusado'}
                                                 </span>
@@ -363,15 +534,24 @@ const ProjectView: React.FC = () => {
                                     {isLeavingTeam ? 'Saindo...' : 'Sair da equipe'}
                                 </button>
                             )}
+                            {currentUser?.role === 'professor' && currentProfessorInvite && (
+                                <button
+                                    onClick={() => setShowProfessorLeaveModal(true)}
+                                    disabled={isProfessorLeaving}
+                                    className="w-full mt-1 rounded-xl border border-amber-300/20 bg-amber-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-amber-100 transition-all hover:bg-amber-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                                >
+                                    {isProfessorLeaving ? 'Saindo...' : 'Sair do projeto'}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </header>
             </div>
 
-            {/* SEÇÕES INFERIORES */}
+            
             <main className="w-full px-6 md:px-12 lg:px-20 py-10 space-y-12">
                 
-                {/* --- 1. SESSÃO DO PROFESSOR (VALIDAÇÃO) --- */}
+                
                 {currentUser?.role === 'professor' && currentProfessorInvite?.status === 'pending' && (
                     <section className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-6 md:p-8 text-left relative overflow-hidden">
                         <div className="absolute left-0 top-0 h-full w-2 bg-amber-500" />
@@ -380,13 +560,13 @@ const ProjectView: React.FC = () => {
                                 <h2 className="font-black text-[#003465] uppercase text-xs tracking-[0.2em]">Convite de Validação</h2>
                                 <span className="text-[10px] bg-amber-50 text-amber-700 px-3 py-1 rounded-full font-bold border border-amber-100">Pendente</span>
                             </div>
-                            <p className="text-xs text-gray-500 leading-relaxed max-w-2xl">Você foi convidado para avaliar este trabalho. Aceite o convite para liberar o chancelamento acadêmico.</p>
+                            <p className="text-xs text-gray-500 leading-relaxed max-w-2xl">Você foi convidado para avaliar este trabalho. Ao aceitar o convite, a validação será registrada automaticamente e o comentário poderá ser adicionado depois.</p>
                             <div className="flex gap-3 justify-end">
                                 <Button onClick={() => handleRespondProfessorInvite('declined')} shape="pill" className="text-red-500 bg-red-50 border border-red-100 font-black uppercase tracking-widest text-[10px] px-8 py-4 shadow-none">
                                     Recusar
                                 </Button>
                                 <Button onClick={() => handleRespondProfessorInvite('accepted')} shape="pill" className="text-white font-black uppercase tracking-widest text-[10px] px-10 py-4 shadow-md">
-                                    Aceitar Convite
+                                    Aceitar e Validar
                                 </Button>
                             </div>
                         </div>
@@ -398,7 +578,7 @@ const ProjectView: React.FC = () => {
                         <div className="absolute left-0 top-0 h-full w-2 bg-gray-300" />
                         <div className="flex flex-col gap-3 pl-4">
                             <h2 className="font-black text-[#003465] uppercase text-xs tracking-[0.2em]">Validação Restrita</h2>
-                            <p className="text-xs text-gray-500 leading-relaxed max-w-2xl">Este projeto pode ser visualizado por qualquer professor, mas apenas docentes convidados e confirmados podem emitir a validação.</p>
+                            <p className="text-xs text-gray-500 leading-relaxed max-w-2xl">Este projeto pode ser visualizado por qualquer professor, mas apenas docentes convidados e confirmados podem registrar a validação.</p>
                         </div>
                     </section>
                 )}
@@ -408,46 +588,52 @@ const ProjectView: React.FC = () => {
                         <div className="absolute left-0 top-0 h-full w-2 bg-green-500" />
                         <div className="flex flex-col gap-5 pl-4">
                             <div className="flex items-center gap-3">
-                                <h2 className="font-black text-[#003465] uppercase text-xs tracking-[0.2em]">Chancelamento Acadêmico</h2>
+                                <h2 className="font-black text-[#003465] uppercase text-xs tracking-[0.2em]">Validação</h2>
                                 <span className="text-[10px] bg-green-50 text-green-600 px-3 py-1 rounded-full font-bold border border-green-100">Ação Formal</span>
                             </div>
                             <p className="text-xs text-gray-500 leading-relaxed max-w-2xl">Como docente, sua validação atesta a integridade e qualidade deste trabalho.</p>
                             <textarea
                                 className="w-full bg-gray-50 border border-gray-100 rounded-xl p-4 text-xs text-[#003465] focus:outline-none focus:border-green-200 transition-all min-h-[100px] resize-none placeholder:text-gray-400 font-medium"
-                                placeholder="Insira seu parecer acadêmico aqui..."
+                                placeholder="Insira seu comentário aqui..."
                                 value={endorseComment}
                                 onChange={(e) => setEndorseComment(e.target.value)}
                             />
                             <div className="flex justify-end pt-2">
                                 <Button onClick={handleEndorse} disabled={isEndorsing} shape="pill" className="text-white font-black uppercase tracking-widest text-[10px] px-12 py-4 shadow-md">
-                                    {isEndorsing ? 'Registrando...' : 'Emitir Chancelamento'}
+                                    {isEndorsing ? 'Registrando...' : 'Registrar Validação'}
                                 </Button>
                             </div>
                         </div>
                     </section>
                 )}
 
-                {/* --- 2. VITRINE DE VALIDAÇÕES --- */}
                 {project.endorsements && project.endorsements.length > 0 && (
                     <section className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-6 md:p-8 text-left relative overflow-hidden">
-                        <h2 className="font-black text-[#003465] uppercase text-xs tracking-[0.2em] mb-8 border-l-4 border-green-500 pl-4">Verificações Docentes</h2>
+                        <h2 className="font-black text-[#003465] uppercase text-xs tracking-[0.2em] mb-8 border-l-4 border-green-500 pl-4">Validações</h2>
                         <div className="space-y-5">
                             {project.endorsements.map((end: any, i: number) => {
                                 const isMyEndorsement = currentUser?.role === 'professor' && (end.professor?._id === currentUser._id || end.professor === currentUser._id);
+                                const canEditMyEndorsement = isMyEndorsement && currentProfessorInvite?.status === 'accepted';
                                 return (
                                     <div key={i} className={`flex gap-4 p-5 bg-gray-50 rounded-2xl border ${isMyEndorsement ? 'border-green-200' : 'border-gray-100'} items-start`}>
                                         <Avatar name={end.professor?.name || "P"} image={end.professor?.profileImage} size="md" className="shrink-0 border border-gray-200" />
                                         <div className="flex flex-col flex-1 pt-1">
                                             <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-100 w-full">
-                                                <div className="flex flex-col">
-                                                    <p className="text-xs font-black text-[#003465] tracking-tight uppercase">{end.professor?.academicTitle || 'Prof.'} {end.professor?.name}</p>
+                                                <div
+                                                    onClick={() => end.professor?._id && navigate(`/professor/${end.professor._id}`)}
+                                                    className="flex flex-col cursor-pointer group"
+                                                >
+                                                    <p className="text-xs font-black text-[#003465] tracking-tight uppercase group-hover:text-[#006ACB] transition-colors">{end.professor?.academicTitle || 'Prof.'} {end.professor?.name}</p>
                                                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{end.professor?.department || "Docente"}</p>
                                                 </div>
-                                                <span className="text-[8px] bg-green-100 text-green-700 px-3 py-1 rounded-full font-black uppercase tracking-wider">Trabalho Validado</span>
+                                                <span className="text-[8px] bg-green-100 text-green-700 px-3 py-1 rounded-full font-black uppercase tracking-wider">Validação Registrada</span>
                                             </div>
-                                            {isMyEndorsement ? (
+                                            {canEditMyEndorsement ? (
                                                 <div className="flex flex-col gap-3">
-                                                    <textarea 
+                                                    <label htmlFor={`edit-comment-${end.professor?._id}`} className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                                        Comentário
+                                                    </label>
+                                                    <textarea
                                                         className="w-full bg-white border border-green-100 rounded-xl p-3 text-xs text-[#006ACB] focus:outline-none focus:border-green-300 font-medium italic min-h-[80px]"
                                                         defaultValue={end.comment}
                                                         id={`edit-comment-${end.professor?._id}`}
@@ -459,22 +645,28 @@ const ProjectView: React.FC = () => {
                                                                 const res = await fetch(`${apiUrl}/projects/${project._id}/endorse/${currentUser._id}`, {
                                                                     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comment: newComment })
                                                                 });
-                                                                if(res.ok) { const data = await res.json(); setProject(data.project); toast.success('Parecer atualizado!'); }
-                                                            } catch(e) { toast.error("Erro ao atualizar."); }
-                                                        }} className="text-[9px] uppercase font-black tracking-widest text-green-600 hover:text-green-700">Salvar</button>
+                                                                if(res.ok) { const data = await res.json(); setProject(data.project); toast.success('Comentário atualizado!'); }
+                                                            } catch(e) { toast.error("Erro ao atualizar o comentário."); }
+                                                        }} className="text-[9px] uppercase font-black tracking-widest text-green-600 hover:text-green-700">Salvar Comentário</button>
                                                         <span className="text-gray-300">|</span>
-                                                        <button onClick={async () => {
-                                                            if(window.confirm('Remover chancelamento?')) {
-                                                                try {
-                                                                    const res = await fetch(`${apiUrl}/projects/${project._id}/endorse/${currentUser._id}`, { method: 'DELETE' });
-                                                                    if(res.ok) { const data = await res.json(); setProject(data.project); toast.info('Removido.'); }
-                                                                } catch(e) { toast.error("Erro ao excluir."); }
-                                                            }
-                                                        }} className="text-[9px] uppercase font-black tracking-widest text-red-400 hover:text-red-500">Excluir</button>
+                                                        <button
+                                                            onClick={() => setShowDeleteValidationModal(true)}
+                                                            className="text-[9px] uppercase font-black tracking-widest text-red-400 hover:text-red-500"
+                                                        >
+                                                            Excluir Validação
+                                                        </button>
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <p className="text-xs text-[#006ACB] font-medium leading-relaxed bg-white p-4 rounded-xl border border-gray-100 shadow-inner italic">"{end.comment}"</p>
+                                                <div className="flex flex-col gap-2">
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Comentário</span>
+                                                    <p className="text-xs text-[#006ACB] font-medium leading-relaxed bg-white p-4 rounded-xl border border-gray-100 shadow-inner italic">"{end.comment}"</p>
+                                                    {isMyEndorsement && (
+                                                        <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">
+                                                            Validação mantida após saída do projeto
+                                                        </span>
+                                                    )}
+                                                </div>
                                             )}
                                         </div>
                                     </div>
@@ -484,7 +676,7 @@ const ProjectView: React.FC = () => {
                     </section>
                 )}
 
-                {/* --- 3. PÔSTERES --- */}
+                
                 <section className="text-left">
                     <h2 className="text-xl font-black text-[#003465] mb-6 border-b-4 border-[#006ACB] w-fit pb-1 uppercase tracking-tighter">Pôsteres</h2>
                     {project.posters?.length > 0 ? (
@@ -502,7 +694,7 @@ const ProjectView: React.FC = () => {
                     )}
                 </section>
 
-                {/* --- 4. DOCUMENTOS E REFERÊNCIAS --- */}
+                
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <section className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-6 md:p-8 text-left">
                         <h2 className="font-black text-[#003465] uppercase text-xs tracking-[0.2em] mb-6 border-l-4 border-[#006ACB] pl-4">Documentação</h2>
@@ -536,8 +728,17 @@ const ProjectView: React.FC = () => {
                     </section>
                 </div>
 
-                <div className="flex justify-center pt-10">
+                <div className="flex flex-col md:flex-row justify-center gap-4 pt-10">
                     <Button onClick={() => navigate(-1)} shape="pill" className="font-black text-white uppercase text-[10px] tracking-[0.2em] px-14 py-4 shadow-xl hover:bg-black transition-all">Voltar para Galeria</Button>
+                    {canCurrentUserEditProject && (
+                        <Button
+                            onClick={() => navigate(`/upload?edit=${project._id}`)}
+                            shape="pill"
+                            className="font-black text-white uppercase text-[10px] tracking-[0.2em] px-14 py-4 shadow-xl hover:bg-black transition-all"
+                        >
+                            Editar projeto
+                        </Button>
+                    )}
                 </div>
             </main>
         </div>

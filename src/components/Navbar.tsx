@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import logo from '../assets/white-logo.svg'; // Trocamos para a logo branca para contrastar com o azul
+import logo from '../assets/white-logo.svg';
 import UserIcon from '../assets/UserIcon.svg';
 
 const Navbar: React.FC = () => {
@@ -29,10 +29,10 @@ const Navbar: React.FC = () => {
     };
 
     return (
-        /* 1. bg-[#003465] para bater com o topo da sidebar */
+        
         <nav className="Navbar flex items-center justify-between px-6 py-3 bg-[#003465] w-full sticky top-0 z-[100] border-b border-white/10">
             
-            {/* 2. Logo menor, sem Link e na extremidade esquerda */}
+            
             <div className="flex items-center">
                 <img 
                     src={logo} 
@@ -46,7 +46,7 @@ const Navbar: React.FC = () => {
                     <div className="relative group">
                         <div className="flex items-center gap-3 cursor-pointer p-1">
                             <div className="flex flex-col items-end hidden sm:flex">
-                                {/* 3. Textos em branco/azul claro para destacar no fundo escuro */}
+                                
                                 <span className="text-sm font-bold text-white">{user.name.split(' ')[0]}</span>
                                 <span className="text-[10px] text-blue-300">Online</span>
                             </div>
@@ -57,7 +57,7 @@ const Navbar: React.FC = () => {
                             />
                         </div>
 
-                        {/* Dropdown de Logout */}
+                        
                         <div className="absolute right-0 mt-0 w-48 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
                             <div className="bg-white border border-gray-100 rounded-xl shadow-2xl overflow-hidden">
                                 <div className="p-4 bg-gray-50 border-b border-gray-100">
