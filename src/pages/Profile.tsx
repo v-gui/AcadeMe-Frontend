@@ -65,12 +65,12 @@ const Profile: React.FC = () => {
         }
     });
 
-    const fetchProjects = useCallback((userId: string, viewer = user) => {
+    const fetchProjects = useCallback((userId: string, viewer?: StudentSummary | null) => {
         fetch(withViewerQuery(`${apiUrl}/students/${userId}/projects`, viewer))
             .then(res => res.json())
             .then((data: ProjectRecord[]) => setProjects(data))
             .catch(() => toast.error("Erro ao carregar projetos."));
-    }, [apiUrl, user]);
+    }, [apiUrl]);
 
 
     useEffect(() => {
