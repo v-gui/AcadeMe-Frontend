@@ -1,6 +1,6 @@
-/* ProjectView.css */
 
-/* --- PALETTE & TYPOGRAPHY CORE --- */
+
+
 :root {
   --academeblue: #006ACB;
   --academedenavy: #003465;
@@ -11,15 +11,15 @@
   --white: #FFFFFF;
 }
 
-/* --- MAIN LAYOUT --- */
+
 .projectview-main {
   background-color: var(--lightgray);
   min-height: 100vh;
-  font-family: 'Inter', -apple-system, sans-serif; /* Use sans-serif por padrão, serif para o título principal */
+  font-family: 'Inter', -apple-system, sans-serif; 
   color: var(--maintext);
 }
 
-/* --- MAIN HEADER SECTION --- */
+
 .projectview-header-main {
   background-color: var(--academedenavy);
   color: var(--white);
@@ -59,7 +59,7 @@
 }
 
 .projectview-title {
-  font-family: 'Georgia', serif; /* Use serif para o título principal, como o do perfil */
+  font-family: 'Georgia', serif; 
   font-size: 3rem;
   font-weight: 800;
   color: var(--white);
@@ -67,7 +67,7 @@
 }
 
 .projectview-metadata {
-  color: #BED7FB; /* Lighter blue/gray for metadata text */
+  color: #BED7FB; 
   font-size: 1rem;
   margin-bottom: 1rem;
 }
@@ -89,7 +89,7 @@
   letter-spacing: 0.05em;
 }
 
-/* --- MAIN CONTENT AREA --- */
+
 .projectview-content-main {
   max-width: 80rem;
   margin: 0 auto;
@@ -111,7 +111,7 @@
   line-height: 1.75;
 }
 
-/* --- POSTERS SECTION --- */
+
 .projectview-section-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -167,13 +167,13 @@
   text-align: center;
 }
 
-/* --- LINKS SECTION --- */
-/* Esta seção recreia o design signature de card, com a borda lateral azul */
+
+
 .projectview-related-section {
   background-color: var(--white);
   border-radius: 1rem;
   border: 1px solid var(--cardborder);
-  border-left: 8px solid var(--academeblue); /* Signature Academe blue strip */
+  border-left: 8px solid var(--academeblue); 
   padding: 2rem;
   display: flex;
   justify-content: space-between;
@@ -192,25 +192,25 @@
   font-size: 0.875rem;
 }
 
-/* --- PILL-STYLE TAGS (For Related Links or other sections) --- */
+
 .projectview-pill-tag {
-  background-color: #E6F0F8; /* Light blue accent background */
+  background-color: #E6F0F8; 
   color: var(--academeblue);
-  border-radius: 9999px; /* Pill shape, just like in Profile tags */
+  border-radius: 9999px; 
   padding: 0.25rem 0.75rem;
   font-weight: 700;
   font-size: 0.625rem;
   text-transform: uppercase;
 }
 
-/* --- BUTTONS & ACTIONS --- */
+
 .projectview-actions-view {
   display: flex;
   justify-content: center;
   margin-top: 2.5rem;
 }
 
-/* Estilo para botões primários no formato pill, como o botão "Novo Projeto" */
+
 .projectview-pill-button {
   border-radius: 9999px;
   background-color: var(--academeblue);

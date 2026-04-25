@@ -1,6 +1,6 @@
-/* ProfileProf.css */
 
-/* Deixa a barra de rolagem fininha e elegante no dropdown de pesquisa */
+
+
 .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
 }

@@ -39,9 +39,9 @@ root.render(
           <Route path="/signup" element={<SignUp />} />
           
           <Route path="/profile" element={<Profile />} />
-          <Route path="/professor-profile" element={<ProfileProf />} /> 
+          <Route path="/professor-profile" element={<ProfileProf />} />
           <Route path="/professor/:id" element={<ProfessorProfileView />} />
-          
+
           <Route path="/upload" element={<Upload />} />
           
           <Route path="/project/:id" element={<ProjectView />} />

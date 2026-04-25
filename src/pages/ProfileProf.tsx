@@ -1,9 +1,7 @@
-﻿/* eslint-disable jsx-a11y/alt-text */
+/* eslint-disable jsx-a11y/alt-text */
 import React, { useRef, useEffect, useState } from 'react';
-import logoBlockchain from '../assets/logoBlockchain.svg'; 
+import logoBlockchain from '../assets/logoBlockchain.svg';
 import { useNavigate } from 'react-router-dom';
-import { TextBar } from '../components/TextBar';
-import { Icon } from '../components/Icon';
 import { toast } from 'react-toastify';
 import Avatar from '../components/Avatar';
 import ProjectCard from '../components/ProjectCard';
@@ -20,26 +18,26 @@ const EXPERTISE_OPTIONS = [
 ].sort();
 
 const ProfileProf: React.FC = () => {
-    const fileInputRef = useRef<HTMLInputElement>(null); 
-    const menuRef = useRef<HTMLDivElement>(null); 
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
-    
+
     const [user, setUser] = useState<ProfessorSummary | null>(null);
-    const [endorsedProjects, setEndorsedProjects] = useState<ProjectRecord[]>([]); 
-    
+    const [endorsedProjects, setEndorsedProjects] = useState<ProjectRecord[]>([]);
+
     const [isEditingBio, setIsEditingBio] = useState(false);
     const [tempBio, setTempBio] = useState("");
     
     const [isEditingExpertise, setIsEditingExpertise] = useState(false);
     const [expertiseSearch, setExpertiseSearch] = useState("");
 
-    const [searchTerm, setSearchTerm] = useState(""); 
+    const [searchTerm, setSearchTerm] = useState("");
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
     const [searchResultStudents, setSearchResultStudents] = useState<SearchResults['students']>([]);
     const [searchResultProfessors, setSearchResultProfessors] = useState<SearchResults['professors']>([]);
     const [searchResultProjects, setSearchResultProjects] = useState<SearchResults['projects']>([]);
 
-    const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false); 
+    const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
 
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
@@ -210,7 +208,7 @@ const ProfileProf: React.FC = () => {
             />
             
             <div className="profile-section flex flex-col md:flex-row flex-grow">
-                {/** --- SIDEBAR DOCENTE --- **/}
+                
                 <div className="profile-sidebar hidden md:flex flex-col bg-gradient-to-b from-[#003465] to-[#001a33] w-full min-w-80 md:w-[350px] shrink-0 p-8 text-white shadow-2xl z-20">
                     <div className="profile-header flex flex-col items-center">
                         <input type="file" ref={fileInputRef} onChange={handleImageChange} className="hidden" accept="image/*" />
@@ -259,7 +257,7 @@ const ProfileProf: React.FC = () => {
                                 </button>
                             </div>
                             
-                            {/* CAIXA DE BUSCA PARA NOVAS ÁREAS DE EXPERTISE */}
+                            
                             {isEditingExpertise && (
                                 <div className="mb-4 relative">
                                     <input 
@@ -281,7 +279,7 @@ const ProfileProf: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* ÁREAS JÁ SELECIONADAS */}
+                            
                             <div className="flex flex-wrap gap-2 mb-6">
                                 {user.areasOfExpertise?.map((exp, i) => (
                                     <div key={i} className={`flex items-center gap-2 text-[10px] px-3 py-1.5 rounded-full uppercase font-bold border transition-all ${isEditingExpertise ? "bg-white text-[#003465] border-white animate-pulse shadow-xl scale-105" : "bg-white/10 text-white border-white/10"}`}>
@@ -297,7 +295,7 @@ const ProfileProf: React.FC = () => {
                     </div>
                 </div>
 
-                {/** --- PAINEL DIREITO --- **/}
+                
                 <div className="projects-section flex flex-col h-auto w-full bg-[#F8FAFC] p-8 md:p-12 lg:p-16 overflow-y-auto">
                     
                     <div className="mb-10 text-left w-full">
@@ -315,7 +313,7 @@ const ProfileProf: React.FC = () => {
                                     description={proj.description}
                                     tags={proj.tags || ["AcadeMe"]}
                                     date={new Date(proj.createdAt || Date.now()).toLocaleDateString()}
-                                    imageUrl={proj.imageUrl || logoBlockchain} 
+                                    imageUrl={proj.imageUrl || logoBlockchain}
                                     isValidated={isProjectValidated(proj)}
                                     onView={() => navigate(getProjectNavigationPath(proj, user?._id, user?.role))}
                                 />

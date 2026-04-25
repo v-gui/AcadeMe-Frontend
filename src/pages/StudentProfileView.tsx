@@ -1,28 +1,16 @@
 /* eslint-disable jsx-a11y/alt-text */
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ProjectCard from '../components/ProjectCard';
-import { TextBar } from '../components/TextBar';
 import { Button } from '../components/Button';
-import { Icon } from '../components/Icon';
-import coloredLogo from '../assets/colored-logo.svg';
 import logoBlockchain from '../assets/logoBlockchain.svg';
 import { toast } from 'react-toastify';
 import Avatar from '../components/Avatar';
-import ValidatedBadge from '../components/ValidatedBadge';
 import AppHeader from '../components/AppHeader';
 import EmptyState from '../components/EmptyState';
 import { SearchResults } from '../types/models';
 import { getProjectNavigationPath, isProjectValidated, withViewerQuery } from '../utils/project';
 import useInviteMenu from '../hooks/useInviteMenu';
-
-interface Aluno {
-    _id: string;
-    name: string;
-    course: string;
-    profileImage?: string; 
-    role?: string;
-}
 
 const StudentProfileView: React.FC = () => {
     const { id } = useParams();
@@ -33,7 +21,7 @@ const StudentProfileView: React.FC = () => {
     const [projects, setProjects] = useState<any[]>([]);
     const [currentUser, setCurrentUser] = useState<any>(null);
     
-    // --- ESTADOS DA BUSCA GLOBAL (HEADER) ---
+
     const [searchTerm, setSearchTerm] = useState("");
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
     const [searchResultStudents, setSearchResultStudents] = useState<SearchResults['students']>([]);
@@ -59,7 +47,7 @@ const StudentProfileView: React.FC = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Carregamento de dados do Estudante e do Usuário Logado
+
     useEffect(() => {
         const savedUser = localStorage.getItem('@AcadeMe:user');
         const parsedUser = savedUser ? JSON.parse(savedUser) : null;
@@ -76,7 +64,7 @@ const StudentProfileView: React.FC = () => {
             .catch(err => console.error("Erro ao carregar projetos:", err));
     }, [id, apiUrl]);
 
-    // --- LÓGICA DE BUSCA GLOBAL (OMNIBOX) ---
+
     useEffect(() => {
         if (!searchTerm.trim()) {
             setSearchResultStudents([]);
@@ -143,7 +131,7 @@ const StudentProfileView: React.FC = () => {
 
             <div className="flex flex-col md:flex-row flex-grow">
                 
-                {/** --- SIDEBAR DO ESTUDANTE --- **/}
+                
                 <div className="w-full min-w-80 md:w-[350px] bg-gradient-to-b from-[#003465] to-[#006ACB] p-10 text-white shrink-0 shadow-2xl z-20">
                     <div className="flex flex-col items-center">
                         <Avatar 
@@ -196,7 +184,7 @@ const StudentProfileView: React.FC = () => {
                     </div>
                 </div>
 
-                {/** --- CONTEÚDO PRINCIPAL (PORTFÓLIO) --- **/}
+                
                 <div className="flex-1 p-8 md:p-12 lg:p-16 overflow-y-auto bg-[#F8FAFC]">
                     <div className="max-w-none mx-auto text-left">
                         <h2 className="text-2xl font-black text-[#003465] mb-12 border-b-4 border-[#006ACB] w-fit pb-2 uppercase tracking-tighter">

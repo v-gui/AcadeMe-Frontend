@@ -1,8 +1,8 @@
-/* Adicione isso no seu arquivo CSS, como ProjectCard.css */
+
 .project-card {
-    transition: transform 0.3s ease; /* Transição suave */
+    transition: transform 0.3s ease; 
   }
   
   .project-card:hover {
-    transform: scale(1.02); /* Aumenta o tamanho do card em 5% ao passar o mouse */
+    transform: scale(1.02); 
   }

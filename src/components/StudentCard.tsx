@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import './StudentCard.css';
-import Avatar from './Avatar'; // Importando o componente reutilizável
+import Avatar from './Avatar';
 
 interface StudentCardProps {
     id: string;
@@ -15,7 +15,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ id, name, course, profileImag
 
     return (
         <div className="student-card-v2">
-            {/* Foto Circular Centralizada usando o Componente Avatar */}
+            
             <div className="student-avatar-wrapper">
                 <Avatar 
                     name={name} 

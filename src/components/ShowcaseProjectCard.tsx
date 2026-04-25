@@ -1,5 +1,5 @@
 import React from 'react';
-import logoBlockchain from '../assets/logoBlockchain.svg'; // Fallback de imagem
+import logoBlockchain from '../assets/logoBlockchain.svg';
 
 interface ShowcaseProjectCardProps {
     id: string;
@@ -25,18 +25,18 @@ const ShowcaseProjectCard: React.FC<ShowcaseProjectCardProps> = ({
             onClick={() => onView(id)} 
             className="flex flex-col bg-white rounded-[24px] shadow-lg hover:shadow-2xl transition-all cursor-pointer h-[420px] overflow-hidden group border border-gray-100"
         >
-            {/* 1. IMAGEM DO PROJETO */}
+            
             <div className="h-48 w-full bg-gray-50 relative overflow-hidden shrink-0 flex items-center justify-center p-2">
                 <img 
                     src={imageUrl || logoBlockchain} 
                     alt={title}
-                    // Se a URL estiver quebrada no banco, ele substitui na hora pela imagem padrão
+
                     onError={(e) => { e.currentTarget.src = logoBlockchain; }} 
                     className="w-full h-full object-cover rounded-[16px] group-hover:scale-105 transition-transform duration-500" 
                 />
             </div>
 
-            {/* 2. CONTEÚDO (TÍTULO E DESCRIÇÃO) */}
+            
             <div className="p-6 flex flex-col flex-1 text-left">
                 <h3 className="font-black text-[#003465] text-lg mb-2 line-clamp-1 truncate" title={title}>
                     {title}
@@ -45,10 +45,10 @@ const ShowcaseProjectCard: React.FC<ShowcaseProjectCardProps> = ({
                     {description}
                 </p>
 
-                {/* 3. RODAPÉ FIXO (TAGS E DATA) */}
+                
                 <div className="mt-auto flex flex-col gap-4">
                     
-                    {/* Tags Forçadas em Uma Linha */}
+                    
                     <div className="flex gap-2 overflow-hidden flex-nowrap w-full">
                         {tags && tags.length > 0 ? (
                             tags.map((tag, i) => (
@@ -66,7 +66,7 @@ const ShowcaseProjectCard: React.FC<ShowcaseProjectCardProps> = ({
                         )}
                     </div>
 
-                    {/* Linha Divisória e Data na Esquerda */}
+                    
                     <div className="flex items-center justify-between border-t border-gray-50 pt-4">
                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
                             {date}

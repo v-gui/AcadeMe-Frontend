@@ -8,12 +8,12 @@ import {
   FaSearch as search,
   FaPlus as add,
   FaUserLock as userLock,
-  FaPencilAlt as edit, // Ícone de Lápis para Editar
-  FaTrashAlt as trash,  // Ícone de Lixeira para Excluir
-  FaSave as save       // Ícone de Disco para Salvar (opcional)
+  FaPencilAlt as edit,
+  FaTrashAlt as trash,
+  FaSave as save
 } from 'react-icons/fa';
 
-// Mapeando os apelidos dos ícones
+
 const iconMap = {
   arrowLeft,
   arrowRight,
@@ -49,7 +49,7 @@ const iconVariants = cva(
       size: {
         default: "h-10 px-4 py-2",
         sm: "h-8 px-3 text-xs",
-        icon: "h-10 w-10", // Tamanho ideal para botões que só tem ícone
+        icon: "h-10 w-10",
       },
     },
     defaultVariants: {
@@ -68,19 +68,23 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, VariantPr
 
 const Icon = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, size, shape, buttonStyle, iconLeft, iconCenter, iconRight, children, ...props }, ref) => {
+    const LeftIcon = iconLeft ? iconMap[iconLeft] : null;
+    const CenterIcon = iconCenter ? iconMap[iconCenter] : null;
+    const RightIcon = iconRight ? iconMap[iconRight] : null;
+
     return (
       <button
         ref={ref}
         className={cn(iconVariants({ shape, size, buttonStyle, className }))} 
         {...props}
       >
-        {iconLeft && <span className={iconCenter || children ? "mr-2" : ""}>{iconMap[iconLeft]({})}</span>}
+        {LeftIcon && <span className={iconCenter || children ? "mr-2" : ""}><LeftIcon /></span>}
         
-        {/* Se tiver children (texto), mostra o texto. Se não, mostra o ícone central */}
+        
         {children}
-        {iconCenter && !children && <span>{iconMap[iconCenter]({})}</span>}
+        {CenterIcon && !children && <span><CenterIcon /></span>}
         
-        {iconRight && <span className={iconCenter || children ? "ml-2" : ""}>{iconMap[iconRight]({})}</span>}
+        {RightIcon && <span className={iconCenter || children ? "ml-2" : ""}><RightIcon /></span>}
       </button>
     );
   }
