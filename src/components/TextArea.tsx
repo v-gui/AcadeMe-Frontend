@@ -1,12 +1,12 @@
-// TextArea.tsx
+
 
 import { TextareaHTMLAttributes, forwardRef, useState } from 'react';
 import { VariantProps, cva } from 'class-variance-authority';
 import { cn } from '../utils/cn';
 
-// Definindo as variantes de estilo para o textarea usando cva
+
 const textAreaVariants = cva(
-  "p-2 border-b-2 border-transparent transition-colors w-full resize-none focus:outline-none", // Estilo base do textarea
+  "p-2 border-b-2 border-transparent transition-colors w-full resize-none focus:outline-none",
   {
     variants: {
       background: {
@@ -56,9 +56,9 @@ const textAreaVariants = cva(
   }
 );
 
-// Definindo as variantes de estilo para o label usando cva
+
 const labelVariants = cva(
-  "mb-1 text-left font-medium", // Estilo base do label
+  "mb-1 text-left font-medium",
   {
     variants: {
       labelSize: {
@@ -83,7 +83,7 @@ const labelVariants = cva(
   }
 );
 
-// Definindo as props para o componente TextArea
+
 interface TextAreaProps extends
   TextareaHTMLAttributes<HTMLTextAreaElement>,
   VariantProps<typeof textAreaVariants>,
@@ -92,10 +92,10 @@ interface TextAreaProps extends
     readOnly?: boolean;
 }
 
-// Criando o componente TextArea
+
 const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
   ({ className, readOnly, background, borderColor, phColor, textSize, textColor, labelSize, labelColor, label, ...props }, ref) => {
-    // Estado para gerenciar o foco no textarea
+
     const [isFocused, setIsFocused] = useState(false);
 
     return (

@@ -1,19 +1,15 @@
-﻿/* eslint-disable jsx-a11y/alt-text */
+/* eslint-disable jsx-a11y/alt-text */
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import './Upload.css';
-import logoPlaceholder from '../assets/white-logo.svg'; 
-import coloredLogo from '../assets/colored-logo.svg';
+import logoPlaceholder from '../assets/white-logo.svg';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { Button } from '../components/Button';
-import { TextBar } from '../components/TextBar';
 import { toast } from 'react-toastify';
 import Avatar from '../components/Avatar';
-import ValidatedBadge from '../components/ValidatedBadge';
 import AppHeader from '../components/AppHeader';
-import EmptyState from '../components/EmptyState';
 import { SearchResults } from '../types/models';
-import { getProjectNavigationPath, isProjectAdmin, isProjectValidated, withViewerQuery } from '../utils/project';
+import { getProjectNavigationPath, isProjectAdmin, withViewerQuery } from '../utils/project';
 import useInviteMenu from '../hooks/useInviteMenu';
 
 interface Aluno {
@@ -90,8 +86,8 @@ const Upload: React.FC = () => {
     const [references, setReferences] = useState<string[]>([]);
     const [refInput, setRefInput] = useState('');
 
-    // --- ESTADOS PARA A BUSCA GLOBAL NO HEADER ---
-    const [alunos, setAlunos] = useState<Aluno[]>([]); // Usado para a lista de convites da equipe
+
+    const [alunos, setAlunos] = useState<Aluno[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
     const [searchResultStudents, setSearchResultStudents] = useState<SearchResults['students']>([]);
@@ -120,7 +116,6 @@ const Upload: React.FC = () => {
     const invitedProfessorsLabel = invitedProfessors.length > 1 ? 'Docentes Convidados' : 'Docente Convidado';
     const invitedProfessorsCountLabel = `${invitedProfessors.length} ${invitedProfessors.length === 1 ? 'DOCENTE' : 'DOCENTES'}`;
 
-    // Fecha menus ao clicar fora
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) setIsAccountMenuOpen(false);
@@ -130,7 +125,7 @@ const Upload: React.FC = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Carregamento de dados
+
     useEffect(() => {
         const savedUser = localStorage.getItem('@AcadeMe:user');
         let parsedUser: any = null;
@@ -143,7 +138,7 @@ const Upload: React.FC = () => {
             return;
         }
 
-        // Carrega alunos para o campo de convite da equipe
+
         fetch(`${apiUrl}/students`).then(res => res.json()).then(data => setAlunos(data || []));
         fetch(`${apiUrl}/professors`).then(res => res.json()).then(data => setProfessors(data || []));
 
@@ -204,7 +199,7 @@ const Upload: React.FC = () => {
         }
     }, [editId, navigate, apiUrl]);
 
-    // --- LÓGICA DE BUSCA GLOBAL (OMNIBOX) ---
+
     useEffect(() => {
         if (!searchTerm.trim()) {
             setSearchResultStudents([]);
@@ -569,11 +564,10 @@ const Upload: React.FC = () => {
                 </div>
             )}
 
-            {/** --- CONTEÚDO PRINCIPAL (MANTIDO IGUAL) --- **/}
             <div className="w-full px-6 md:px-12 lg:px-20 mt-6 text-left">
                 <header className="bg-[#003465] text-white p-6 md:p-10 rounded-[40px] shadow-2xl">
                     <div className="grid grid-cols-1 lg:grid-cols-[180px_1fr_240px] gap-8 items-start">
-                        {/* Capa */}
+                        
                         <div className="flex flex-col gap-5">
                             <div onClick={() => coverInputRef.current?.click()} className="relative group w-full aspect-square cursor-pointer hover:scale-105 transition-all">
                                 <div className="w-full h-full bg-white rounded-[28px] flex items-center justify-center p-2 shadow-inner overflow-hidden border-4 border-white/10">
@@ -588,7 +582,7 @@ const Upload: React.FC = () => {
                                 }} className="hidden" accept="image/*" />
                             </div>
 
-                            {/* Tags */}
+                            
                             <div className="flex flex-col gap-2 relative" ref={tagDropdownRef}>
                                 <label className="text-blue-300/60 text-[8px] font-black uppercase tracking-widest opacity-70">Tecnologias</label>
                                 <div className="flex flex-wrap items-center gap-1.5">
@@ -613,7 +607,7 @@ const Upload: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Título e Descrição */}
+                        
                         <div className="flex flex-col gap-4">
                             <div className="bg-white/[0.03] border border-white/[0.08] p-4 rounded-[20px] shadow-inner focus-within:bg-white/[0.06] transition-all">
                                 <label className="text-blue-300/60 text-[8px] font-black uppercase tracking-[0.2em] block mb-1">Título do Trabalho</label>
@@ -625,7 +619,7 @@ const Upload: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Equipe */}
+
                         <div className="bg-white/[0.02] backdrop-blur-xl rounded-[28px] p-4 md:p-5 border border-white/[0.08] flex flex-col gap-4 shadow-xl">
                             <div className="flex items-center justify-between border-b border-white/[0.05] pb-2">
                                 <h3 className="text-white/80 text-[9px] font-black uppercase tracking-widest">Equipe</h3>
@@ -755,9 +749,9 @@ const Upload: React.FC = () => {
                 </header>
             </div>
 
-            {/** --- SEÇÕES INFERIORES --- **/}
+            
             <main className="w-full px-6 md:px-12 lg:px-20 py-10 space-y-12">
-                {/* Pôsteres */}
+                
                 <section className="text-left">
                     <h2 className="text-xl font-black text-[#003465] mb-6 border-b-4 border-[#006ACB] w-fit pb-1 uppercase tracking-tighter">Pôsteres</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -775,7 +769,7 @@ const Upload: React.FC = () => {
                 </section>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Documentação */}
+                    
                     <section className="bg-white rounded-[32px] shadow-sm border border-gray-100 overflow-hidden text-left flex flex-col">
                         <div className="p-4 bg-gray-50 border-b flex justify-between items-center h-14">
                             <h2 className="font-black text-[#003465] text-xs uppercase tracking-widest border-l-4 border-[#006ACB] pl-3">Documentação</h2>
@@ -797,7 +791,7 @@ const Upload: React.FC = () => {
                         </div>
                     </section>
 
-                    {/* Referências */}
+                    
                     <section className="bg-white rounded-[32px] shadow-sm border border-gray-100 overflow-hidden text-left flex flex-col">
                         <div className="p-4 bg-gray-50 border-b flex justify-between items-center h-14">
                             <h2 className="font-black text-[#003465] text-xs uppercase tracking-widest border-l-4 border-[#006ACB] pl-3">Referências</h2>

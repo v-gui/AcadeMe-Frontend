@@ -72,7 +72,7 @@ const useInviteMenu = (currentUser?: InviteUser | null, options: UseInviteMenuOp
 
         const payload =
             role === 'professor'
-                ? { professorId: currentUser._id, status }
+                ? { professorId: currentUser._id, status, comment: '' }
                 : { studentId: currentUser._id, status };
 
         try {
@@ -92,7 +92,7 @@ const useInviteMenu = (currentUser?: InviteUser | null, options: UseInviteMenuOp
             setInvites((previousInvites) => previousInvites.filter((invite) => invite._id !== projectId));
 
             if (status === 'accepted') {
-                toast.success(role === 'professor' ? 'Convite aceito. Você já pode validar o projeto.' : 'Equipe atualizada.');
+                toast.success(role === 'professor' ? 'Convite aceito e validação registrada.' : 'Equipe atualizada.');
                 await options.onAccepted?.(projectId);
             } else {
                 toast.success(role === 'professor' ? 'Convite recusado.' : 'Convite recusado.');

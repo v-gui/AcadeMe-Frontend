@@ -1,8 +1,4 @@
-/**
- * Shared frontend models used across pages and reusable components.
- * These types intentionally stay close to the backend payloads to make
- * future maintenance easier when adding or adjusting API fields.
- */
+
 
 export type InviteStatus = 'accepted' | 'pending' | 'declined';
 
