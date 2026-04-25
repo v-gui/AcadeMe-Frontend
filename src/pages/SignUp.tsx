@@ -68,7 +68,8 @@ const SignUp: React.FC = () => {
             });
 
             if (response.ok) {
-                toast.success(`Cadastro de ${role === 'student' ? 'aluno' : 'professor'} realizado com sucesso!`);
+                const data = await response.json();
+                toast.success(data.message || `Cadastro de ${role === 'student' ? 'aluno' : 'professor'} realizado com sucesso!`);
                 navigate('/login');
             } else {
                 const data = await response.json();
@@ -168,6 +169,10 @@ const SignUp: React.FC = () => {
                     <Button type="submit" className="p-4 w-full justify-center mt-4 shadow-lg shadow-blue-50 font-black uppercase tracking-widest text-xs" disabled={loading}>
                         {loading ? "Processando..." : "Criar minha conta"}
                     </Button>
+
+                    <p className="text-center text-[10px] font-bold uppercase tracking-widest text-[#6C8299] leading-relaxed">
+                        Seu acesso será liberado após a confirmação enviada para o e-mail informado.
+                    </p>
 
                     <p className="w-full text-center mt-4 text-xs text-gray-400 font-medium">
                         Já possui uma conta? <Link to="/login" className="text-[#006ACB] font-black hover:underline ml-1 uppercase">Faça login</Link>

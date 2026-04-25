@@ -101,9 +101,9 @@ const Login: React.FC = () => {
                                 name="password"
                                 required
                             />
-                            <button type="button" className='text-[#006ACB] text-[10px] font-bold uppercase tracking-widest mt-3 self-end hover:underline opacity-70'>
+                            <Link to="/forgot-password" className='text-[#006ACB] text-[10px] font-bold uppercase tracking-widest mt-3 self-end hover:underline opacity-70'>
                                 Esqueci minha senha
-                            </button>
+                            </Link>
                         </div>
 
                         <Button 
