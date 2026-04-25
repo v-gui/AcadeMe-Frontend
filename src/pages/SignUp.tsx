@@ -13,7 +13,7 @@ const SignUp: React.FC = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     
-    // Estado para controlar o tipo de conta (Toggle)
+
     const [role, setRole] = useState<'student' | 'professor'>('student');
 
     const [formData, setFormData] = useState({
@@ -50,7 +50,7 @@ const SignUp: React.FC = () => {
             bio: formData.bio,
         };
 
-        // Regra de Negócio: Se Aluno vai o "Course", se Professor vai o "Department"
+
         if (role === 'student') {
             payload.course = formData.course;
         } else {
@@ -68,7 +68,8 @@ const SignUp: React.FC = () => {
             });
 
             if (response.ok) {
-                toast.success(`Cadastro de ${role === 'student' ? 'aluno' : 'professor'} realizado com sucesso!`);
+                const data = await response.json();
+                toast.success(data.message || `Cadastro de ${role === 'student' ? 'aluno' : 'professor'} realizado com sucesso!`);
                 navigate('/login');
             } else {
                 const data = await response.json();
@@ -84,7 +85,7 @@ const SignUp: React.FC = () => {
     return (
         <div className="SignUp w-screen min-h-screen flex items-center justify-center bg-white overflow-hidden relative">
             
-            {/** BANNER ESQUERDO **/}
+            
             <div className="banner hidden 2xl:flex absolute left-0 top-0 bg-gradient-to-br from-[#006ACB] to-[#003465] p-16 flex-col justify-center items-center w-[400px] h-screen z-20">
                 <Link to="/">
                     <img src={logo} alt="logo" className="w-48 mb-8 hover:scale-105 transition-transform" />
@@ -94,7 +95,7 @@ const SignUp: React.FC = () => {
                 </p>
             </div>
 
-            {/** CONTAINER DO FORMULÁRIO **/}
+            
             <div className='flex flex-col items-center justify-center w-full max-w-[600px] px-8 z-10 2xl:ml-[200px] py-10'>
                 
                 <div className="2xl:hidden mb-8">
@@ -103,7 +104,7 @@ const SignUp: React.FC = () => {
 
                 <h1 className="text-[#006ACB] text-4xl mb-6 font-black uppercase tracking-tighter">Cadastro</h1>
 
-                {/* TOGGLE ALUNO / PROFESSOR */}
+                
                 <div className="flex bg-gray-100 p-1.5 rounded-full mb-8 w-full max-w-sm shadow-inner">
                     <button
                         type="button"
@@ -168,6 +169,10 @@ const SignUp: React.FC = () => {
                     <Button type="submit" className="p-4 w-full justify-center mt-4 shadow-lg shadow-blue-50 font-black uppercase tracking-widest text-xs" disabled={loading}>
                         {loading ? "Processando..." : "Criar minha conta"}
                     </Button>
+
+                    <p className="text-center text-[10px] font-bold uppercase tracking-widest text-[#6C8299] leading-relaxed">
+                        Seu acesso será liberado após a confirmação enviada para o e-mail informado.
+                    </p>
 
                     <p className="w-full text-center mt-4 text-xs text-gray-400 font-medium">
                         Já possui uma conta? <Link to="/login" className="text-[#006ACB] font-black hover:underline ml-1 uppercase">Faça login</Link>

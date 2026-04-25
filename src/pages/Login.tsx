@@ -28,7 +28,7 @@ const Login: React.FC = () => {
         const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
         try {
-            // Usa a nova rota universal de login no Backend
+
             const response = await fetch(`${apiUrl}/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -40,7 +40,7 @@ const Login: React.FC = () => {
             if (response.ok) {
                 localStorage.setItem('@AcadeMe:user', JSON.stringify(data.user));
                 
-                // Roteamento inteligente baseado na "role" do usuário
+
                 if (data.user.role === 'professor') {
                     toast.success(`Bem-vindo(a), Prof. ${data.user.name.split(' ')[0]}!`);
                     navigate('/professor-profile'); 
@@ -101,9 +101,9 @@ const Login: React.FC = () => {
                                 name="password"
                                 required
                             />
-                            <a href="#" className='text-[#006ACB] text-[10px] font-bold uppercase tracking-widest mt-3 self-end hover:underline opacity-70'>
+                            <Link to="/forgot-password" className='text-[#006ACB] text-[10px] font-bold uppercase tracking-widest mt-3 self-end hover:underline opacity-70'>
                                 Esqueci minha senha
-                            </a>
+                            </Link>
                         </div>
 
                         <Button 

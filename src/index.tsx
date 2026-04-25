@@ -9,8 +9,12 @@ import './index.css';
 import Home from './pages/Home';
 import SignUp from './pages/SignUp';
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import VerifyEmail from './pages/VerifyEmail';
 import Profile from './pages/Profile';
 import ProfileProf from './pages/ProfileProf';
+import ProfessorProfileView from './pages/ProfessorProfileView';
 import Upload from './pages/Upload';
 import ProjectView from './pages/ProjectView'; 
 import StudentProfileView from './pages/StudentProfileView';
@@ -36,10 +40,14 @@ root.render(
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />        
           <Route path="/signup" element={<SignUp />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
           
           <Route path="/profile" element={<Profile />} />
-          <Route path="/professor-profile" element={<ProfileProf />} /> 
-          
+          <Route path="/professor-profile" element={<ProfileProf />} />
+          <Route path="/professor/:id" element={<ProfessorProfileView />} />
+
           <Route path="/upload" element={<Upload />} />
           
           <Route path="/project/:id" element={<ProjectView />} />
