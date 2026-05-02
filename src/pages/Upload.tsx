@@ -113,8 +113,9 @@ const Upload: React.FC = () => {
     const acceptedMembersCount = (isCurrentUserStudent && userId ? 1 : 0) + acceptedCollaboratorsCount;
     const isCurrentUserAdmin = isProjectAdmin(loadedProject, currentUser?._id);
     const canDeleteCurrentProject = Boolean(editId && isCurrentUserStudent && isCurrentUserAdmin && acceptedMembersCount <= 1);
-    const invitedProfessorsLabel = invitedProfessors.length > 1 ? 'Docentes Convidados' : 'Docente Convidado';
-    const invitedProfessorsCountLabel = `${invitedProfessors.length} ${invitedProfessors.length === 1 ? 'DOCENTE' : 'DOCENTES'}`;
+    const visibleInvitedProfessors = invitedProfessors.filter((professor) => professor.status !== 'declined');
+    const invitedProfessorsLabel = visibleInvitedProfessors.length > 1 ? 'Docentes Convidados' : 'Docente Convidado';
+    const invitedProfessorsCountLabel = `${visibleInvitedProfessors.length} ${visibleInvitedProfessors.length === 1 ? 'DOCENTE' : 'DOCENTES'}`;
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -708,13 +709,13 @@ const Upload: React.FC = () => {
                                     )}
                                 </div>
                                 <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[180px] custom-scrollbar pr-1">
-                                    {invitedProfessors.map((p) => (
+                                    {visibleInvitedProfessors.map((p) => (
                                         <div key={p.professor?._id} className="group flex items-center gap-2.5 p-2 rounded-lg border border-amber-400/10 bg-amber-500/5 transition-all">
                                             <Avatar name={p.professor?.name} image={p.professor?.profileImage} size="sm" />
                                             <div className="flex-1 flex flex-col text-left">
                                                 <span className="font-bold text-[12px] text-white">{p.professor?.academicTitle || 'Prof.'} {p.professor?.name}</span>
-                                                <span className={`text-[8px] font-black uppercase tracking-tighter ${p.status === 'accepted' ? 'text-green-400' : p.status === 'pending' ? 'text-yellow-400' : 'text-red-400'}`}>
-                                                    {p.status === 'accepted' ? 'Docente Confirmado' : p.status === 'pending' ? 'Convite Pendente' : 'Convite Recusado'}
+                                                <span className={`text-[8px] font-black uppercase tracking-tighter ${p.status === 'accepted' ? 'text-green-400' : 'text-yellow-400'}`}>
+                                                    {p.status === 'accepted' ? 'Docente Confirmado' : 'Convite Pendente'}
                                                 </span>
                                             </div>
                                             <button onClick={() => handleRemoveProfessor(p.professor?._id, p.professor?.name, p.status)} className="opacity-0 group-hover:opacity-100 text-red-400 text-xs">×</button>

@@ -50,6 +50,7 @@ const ProjectView: React.FC = () => {
     const [showProfessorLeaveModal, setShowProfessorLeaveModal] = useState(false);
     const [showDeleteValidationModal, setShowDeleteValidationModal] = useState(false);
     const [isDeletingValidation, setIsDeletingValidation] = useState(false);
+    const [expandedEndorsementEditorId, setExpandedEndorsementEditorId] = useState<string | null>(null);
 
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
     const { inviteMenu } = useInviteMenu(currentUser, {
@@ -173,7 +174,11 @@ const ProjectView: React.FC = () => {
     }, [currentUser, project]);
 
     const canCurrentProfessorEndorse = currentProfessorInvite?.status === 'accepted';
-    const invitedProfessorsCount = project?.invitedProfessors?.length ?? 0;
+    const visibleInvitedProfessors = useMemo(
+        () => (project?.invitedProfessors || []).filter((invite: any) => invite.status !== 'declined'),
+        [project]
+    );
+    const invitedProfessorsCount = visibleInvitedProfessors.length;
     const invitedProfessorsLabel = invitedProfessorsCount > 1 ? 'Docentes Convidados' : 'Docente Convidado';
 
     const isCurrentUserAcceptedMember = useMemo(() => {
@@ -289,6 +294,30 @@ const ProjectView: React.FC = () => {
             toast.error('Erro ao excluir a validação.');
         } finally {
             setIsDeletingValidation(false);
+        }
+    };
+
+    const handleClearValidationComment = async () => {
+        if (!currentUser || currentUser.role !== 'professor' || !project?._id) return;
+
+        try {
+            const response = await fetch(`${apiUrl}/projects/${project._id}/endorse/${currentUser._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ comment: '' })
+            });
+
+            const data = await response.json().catch(() => null);
+
+            if (response.ok) {
+                setProject(data.project);
+                setExpandedEndorsementEditorId(null);
+                toast.info('Comentário removido.');
+            } else {
+                toast.error(data?.error || 'Não foi possível excluir o comentário.');
+            }
+        } catch (error) {
+            toast.error('Erro ao excluir o comentário.');
         }
     };
 
@@ -505,10 +534,10 @@ const ProjectView: React.FC = () => {
                                     </div>
                                 ))}
                             </div>
-                            {project.invitedProfessors?.length > 0 && (
+                            {visibleInvitedProfessors.length > 0 && (
                                 <div className="border-t border-white/[0.05] pt-3 flex flex-col gap-2.5">
                                     <h4 className="text-amber-100 text-[10px] font-black uppercase tracking-widest">{invitedProfessorsLabel}</h4>
-                                    {project.invitedProfessors.map((invite: any, i: number) => (
+                                    {visibleInvitedProfessors.map((invite: any, i: number) => (
                                         <div
                                             key={`prof-${i}`}
                                             onClick={() => invite.professor?._id && navigate(`/professor/${invite.professor._id}`)}
@@ -517,8 +546,8 @@ const ProjectView: React.FC = () => {
                                             <Avatar name={invite.professor?.name} image={invite.professor?.profileImage} size="sm" className="border border-amber-200/20" />
                                             <div className="flex flex-col flex-1">
                                                 <span className="text-white/90 font-bold text-[12px] group-hover:text-amber-100 transition-colors">{invite.professor?.academicTitle || 'Prof.'} {invite.professor?.name}</span>
-                                                <span className={`text-[8px] font-black uppercase tracking-widest ${invite.status === 'accepted' ? 'text-green-400' : invite.status === 'pending' ? 'text-yellow-400' : 'text-red-400'}`}>
-                                                    {invite.status === 'accepted' ? 'Docente Confirmado' : invite.status === 'pending' ? 'Convite Pendente' : 'Convite Recusado'}
+                                                <span className={`text-[8px] font-black uppercase tracking-widest ${invite.status === 'accepted' ? 'text-green-400' : 'text-yellow-400'}`}>
+                                                    {invite.status === 'accepted' ? 'Docente Confirmado' : 'Convite Pendente'}
                                                 </span>
                                             </div>
                                         </div>
@@ -612,8 +641,12 @@ const ProjectView: React.FC = () => {
                         <h2 className="font-black text-[#003465] uppercase text-xs tracking-[0.2em] mb-8 border-l-4 border-green-500 pl-4">Validações</h2>
                         <div className="space-y-5">
                             {project.endorsements.map((end: any, i: number) => {
+                                const endorsementProfessorId = end.professor?._id || end.professor?.toString?.() || '';
                                 const isMyEndorsement = currentUser?.role === 'professor' && (end.professor?._id === currentUser._id || end.professor === currentUser._id);
-                                const canEditMyEndorsement = isMyEndorsement && currentProfessorInvite?.status === 'accepted';
+                                const hasComment = Boolean(end.comment?.trim());
+                                const canManageMyEndorsement = isMyEndorsement && currentProfessorInvite?.status === 'accepted';
+                                const hasKeptEndorsementAfterLeave = isMyEndorsement && !currentProfessorInvite;
+                                const shouldShowExpandedEditor = canManageMyEndorsement && (hasComment || expandedEndorsementEditorId === endorsementProfessorId);
                                 return (
                                     <div key={i} className={`flex gap-4 p-5 bg-gray-50 rounded-2xl border ${isMyEndorsement ? 'border-green-200' : 'border-gray-100'} items-start`}>
                                         <Avatar name={end.professor?.name || "P"} image={end.professor?.profileImage} size="md" className="shrink-0 border border-gray-200" />
@@ -628,7 +661,7 @@ const ProjectView: React.FC = () => {
                                                 </div>
                                                 <span className="text-[8px] bg-green-100 text-green-700 px-3 py-1 rounded-full font-black uppercase tracking-wider">Validação Registrada</span>
                                             </div>
-                                            {canEditMyEndorsement ? (
+                                            {shouldShowExpandedEditor ? (
                                                 <div className="flex flex-col gap-3">
                                                     <label htmlFor={`edit-comment-${end.professor?._id}`} className="text-[10px] font-black uppercase tracking-widest text-gray-400">
                                                         Comentário
@@ -645,9 +678,16 @@ const ProjectView: React.FC = () => {
                                                                 const res = await fetch(`${apiUrl}/projects/${project._id}/endorse/${currentUser._id}`, {
                                                                     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comment: newComment })
                                                                 });
-                                                                if(res.ok) { const data = await res.json(); setProject(data.project); toast.success('Comentário atualizado!'); }
+                                                                if(res.ok) { const data = await res.json(); setProject(data.project); setExpandedEndorsementEditorId(endorsementProfessorId); toast.success('Comentário atualizado!'); }
                                                             } catch(e) { toast.error("Erro ao atualizar o comentário."); }
                                                         }} className="text-[9px] uppercase font-black tracking-widest text-green-600 hover:text-green-700">Salvar Comentário</button>
+                                                        <span className="text-gray-300">|</span>
+                                                        <button
+                                                            onClick={handleClearValidationComment}
+                                                            className="text-[9px] uppercase font-black tracking-widest text-amber-500 hover:text-amber-600"
+                                                        >
+                                                            Excluir Comentário
+                                                        </button>
                                                         <span className="text-gray-300">|</span>
                                                         <button
                                                             onClick={() => setShowDeleteValidationModal(true)}
@@ -658,10 +698,31 @@ const ProjectView: React.FC = () => {
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <div className="flex flex-col gap-2">
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Comentário</span>
-                                                    <p className="text-xs text-[#006ACB] font-medium leading-relaxed bg-white p-4 rounded-xl border border-gray-100 shadow-inner italic">"{end.comment}"</p>
-                                                    {isMyEndorsement && (
+                                                <div className={`flex flex-col ${hasComment ? 'gap-2' : 'gap-1'}`}>
+                                                    {!hasComment && (
+                                                        canManageMyEndorsement ? (
+                                                            <div className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white px-4 py-3">
+                                                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Validação sem comentário</span>
+                                                                <button
+                                                                    onClick={() => setExpandedEndorsementEditorId(endorsementProfessorId)}
+                                                                    className="shrink-0 text-[9px] uppercase font-black tracking-widest text-green-600 hover:text-green-700"
+                                                                >
+                                                                    Adicionar comentário
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Validação sem comentário</span>
+                                                        )
+                                                    )}
+                                                    {hasComment && (
+                                                        <>
+                                                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Comentário</span>
+                                                            <p className="text-xs text-[#006ACB] font-medium leading-relaxed bg-white p-4 rounded-xl border border-gray-100 shadow-inner italic">
+                                                                "{end.comment}"
+                                                            </p>
+                                                        </>
+                                                    )}
+                                                    {hasKeptEndorsementAfterLeave && (
                                                         <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">
                                                             Validação mantida após saída do projeto
                                                         </span>
@@ -746,4 +807,5 @@ const ProjectView: React.FC = () => {
 };
 
 export default ProjectView;
+
 
