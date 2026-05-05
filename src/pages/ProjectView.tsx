@@ -48,8 +48,6 @@ const ProjectView: React.FC = () => {
     const [showLeaveTeamModal, setShowLeaveTeamModal] = useState(false);
     const [isProfessorLeaving, setIsProfessorLeaving] = useState(false);
     const [showProfessorLeaveModal, setShowProfessorLeaveModal] = useState(false);
-    const [showDeleteValidationModal, setShowDeleteValidationModal] = useState(false);
-    const [isDeletingValidation, setIsDeletingValidation] = useState(false);
     const [expandedEndorsementEditorId, setExpandedEndorsementEditorId] = useState<string | null>(null);
 
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
@@ -271,32 +269,6 @@ const ProjectView: React.FC = () => {
         }
     };
 
-    const handleDeleteValidation = async () => {
-        if (!currentUser || currentUser.role !== 'professor' || !project?._id) return;
-
-        setIsDeletingValidation(true);
-
-        try {
-            const response = await fetch(`${apiUrl}/projects/${project._id}/endorse/${currentUser._id}`, {
-                method: 'DELETE'
-            });
-
-            const data = await response.json().catch(() => null);
-
-            if (response.ok) {
-                setProject(data.project);
-                setShowDeleteValidationModal(false);
-                toast.info('Validação removida.');
-            } else {
-                toast.error(data?.error || 'Não foi possível excluir a validação.');
-            }
-        } catch (error) {
-            toast.error('Erro ao excluir a validação.');
-        } finally {
-            setIsDeletingValidation(false);
-        }
-    };
-
     const handleClearValidationComment = async () => {
         if (!currentUser || currentUser.role !== 'professor' || !project?._id) return;
 
@@ -439,36 +411,6 @@ const ProjectView: React.FC = () => {
                             <button
                                 onClick={() => setShowProfessorLeaveModal(false)}
                                 disabled={isProfessorLeaving}
-                                className="text-gray-400 font-bold py-2 text-xs uppercase tracking-widest hover:text-gray-600 transition-colors disabled:opacity-60"
-                            >
-                                Cancelar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {showDeleteValidationModal && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                    <div className="bg-white rounded-3xl p-10 max-w-sm w-[90%] shadow-2xl flex flex-col items-center text-center border border-gray-100">
-                        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6">
-                            <Icon iconCenter="userLock" className="w-8 h-8" />
-                        </div>
-                        <h3 className="text-2xl font-black text-[#003465] uppercase tracking-tighter">Excluir Validação?</h3>
-                        <p className="text-gray-500 text-sm my-4 font-medium">
-                            Ao excluir esta validação, o comentário associado também será removido deste trabalho.
-                        </p>
-                        <div className="flex flex-col w-full gap-3 mt-4">
-                            <Button
-                                onClick={handleDeleteValidation}
-                                disabled={isDeletingValidation}
-                                className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-full shadow-lg shadow-red-100"
-                            >
-                                {isDeletingValidation ? "Excluindo..." : "Sim, excluir validação"}
-                            </Button>
-                            <button
-                                onClick={() => setShowDeleteValidationModal(false)}
-                                disabled={isDeletingValidation}
                                 className="text-gray-400 font-bold py-2 text-xs uppercase tracking-widest hover:text-gray-600 transition-colors disabled:opacity-60"
                             >
                                 Cancelar
@@ -688,13 +630,6 @@ const ProjectView: React.FC = () => {
                                                         >
                                                             Excluir Comentário
                                                         </button>
-                                                        <span className="text-gray-300">|</span>
-                                                        <button
-                                                            onClick={() => setShowDeleteValidationModal(true)}
-                                                            className="text-[9px] uppercase font-black tracking-widest text-red-400 hover:text-red-500"
-                                                        >
-                                                            Excluir Validação
-                                                        </button>
                                                     </div>
                                                 </div>
                                             ) : (
@@ -807,5 +742,6 @@ const ProjectView: React.FC = () => {
 };
 
 export default ProjectView;
+
 
 
